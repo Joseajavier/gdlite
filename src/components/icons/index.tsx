@@ -1,0 +1,22 @@
+// Exportar todos los iconos desde un solo lugar
+export { default as EyeIcon } from './EyeIcon';
+export { default as EyeOffIcon } from './EyeOffIcon';
+export { default as UserIcon } from './UserIcon';
+export { default as LockIcon } from './LockIcon';
+export { default as LogoutIcon } from './LogoutIcon';
+export { default as HomeIcon } from './HomeIcon';
+export { default as DocumentIcon } from './DocumentIcon';
+export { default as SettingsIcon } from './SettingsIcon';
+export { default as ChevronDownIcon } from './ChevronDownIcon';
+export { default as ChevronUpIcon } from './ChevronUpIcon';
+export { default as CheckIcon } from './CheckIcon';
+export { default as CloseIcon } from './CloseIcon';
+export { default as MenuIcon } from './MenuIcon';
+export { default as SearchIcon } from './SearchIcon';
+export { default as PlusIcon } from './PlusIcon';
+export { default as EditIcon } from './EditIcon';
+export { default as DeleteIcon } from './DeleteIcon';
+export { default as InfoIcon } from './InfoIcon';
+export { default as WarningIcon } from './WarningIcon';
+export { default as ErrorIcon } from './ErrorIcon';
+export { default as SuccessIcon } from './SuccessIcon';
