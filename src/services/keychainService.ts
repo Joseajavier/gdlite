@@ -1,11 +1,13 @@
 import * as Keychain from 'react-native-keychain';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Constantes para las llaves del keychain
 const KEYCHAIN_KEYS = {
   APP_CONFIG: 'app_config',
-  BIOMETRICS_ENABLED: 'biometrics_enabled',
   USER_CREDENTIALS: 'user_credentials',
 } as const;
+
+const BIOMETRICS_KEY = 'biometricsEnabled';
 
 // Interfaz para los datos de configuración de la app
 export interface AppConfigData {
@@ -29,6 +31,24 @@ export interface UserCredentials {
 
 class KeychainService {
   /**
+   * Guarda credenciales de usuario en el Keychain genérico (para biometría)
+   */
+  async saveGenericCredentials(credentials: UserCredentials): Promise<boolean> {
+    try {
+      await Keychain.setGenericPassword(
+        credentials.username,
+        credentials.password,
+        {
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+        }
+      );
+      return true;
+    } catch (error) {
+      console.error('Error saving generic credentials to keychain:', error);
+      return false;
+    }
+  }
+  /**
    * Guarda la configuración de la app en el keychain
    */
   async saveAppConfig(config: AppConfigData): Promise<boolean> {
@@ -37,7 +57,10 @@ class KeychainService {
       await Keychain.setInternetCredentials(
         KEYCHAIN_KEYS.APP_CONFIG,
         'app_config',
-        configString
+        configString,
+        {
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+        }
       );
       return true;
     } catch (error) {
@@ -92,19 +115,17 @@ class KeychainService {
     );
   }
 
+  // --- NUEVO: Flag biométrico en AsyncStorage ---
+
   /**
    * Guarda el estado de la biometría (activada/desactivada)
    */
   async setBiometricsEnabled(enabled: boolean): Promise<boolean> {
     try {
-      await Keychain.setInternetCredentials(
-        KEYCHAIN_KEYS.BIOMETRICS_ENABLED,
-        'biometrics',
-        enabled.toString()
-      );
+      await AsyncStorage.setItem(BIOMETRICS_KEY, enabled ? 'true' : 'false');
       return true;
     } catch (error) {
-      console.error('Error saving biometrics state to keychain:', error);
+      console.error('Error saving biometrics state to AsyncStorage:', error);
       return false;
     }
   }
@@ -114,16 +135,15 @@ class KeychainService {
    */
   async getBiometricsEnabled(): Promise<boolean> {
     try {
-      const credentials = await Keychain.getInternetCredentials(KEYCHAIN_KEYS.BIOMETRICS_ENABLED);
-      if (credentials && credentials.password) {
-        return credentials.password === 'true';
-      }
-      return false;
+      const value = await AsyncStorage.getItem(BIOMETRICS_KEY);
+      return value === 'true';
     } catch (error) {
-      console.error('Error reading biometrics state from keychain:', error);
+      console.error('Error reading biometrics state from AsyncStorage:', error);
       return false;
     }
   }
+
+  // --- FIN NUEVO ---
 
   /**
    * Guarda credenciales de usuario
@@ -133,7 +153,10 @@ class KeychainService {
       await Keychain.setInternetCredentials(
         KEYCHAIN_KEYS.USER_CREDENTIALS,
         credentials.username,
-        credentials.password
+        credentials.password,
+        {
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+        }
       );
       return true;
     } catch (error) {
@@ -162,14 +185,14 @@ class KeychainService {
   }
 
   /**
-   * Limpia todos los datos del keychain
+   * Limpia todos los datos del keychain y el flag biométrico
    */
   async clearAll(): Promise<boolean> {
     try {
       await Promise.all([
         Keychain.resetInternetCredentials({ server: KEYCHAIN_KEYS.APP_CONFIG }),
-        Keychain.resetInternetCredentials({ server: KEYCHAIN_KEYS.BIOMETRICS_ENABLED }),
         Keychain.resetInternetCredentials({ server: KEYCHAIN_KEYS.USER_CREDENTIALS }),
+        AsyncStorage.removeItem(BIOMETRICS_KEY),
       ]);
       return true;
     } catch (error) {

@@ -24,10 +24,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
     try {
       const { keychainService } = await import('../services/keychainService');
       const config = await keychainService.getAppConfig();
-      // Aquí podrías mostrar la configuración en pantalla si lo deseas
-      // Por ahora no se muestra nada
+      console.log('[Config] Datos guardados:', config);
+      Alert.alert(
+        'Configuración guardada',
+        config ? JSON.stringify(config, null, 2) : 'No hay configuración guardada'
+      );
     } catch (error) {
-      // Error silenciado
+      console.error('[Config] Error al obtener configuración:', error);
+      Alert.alert('Error', 'No se pudo obtener la configuración');
     }
   };
   const [showUserMenu, setShowUserMenu] = useState(false);

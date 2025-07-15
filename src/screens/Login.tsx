@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,7 +6,6 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Alert,
   ActivityIndicator,
   Image,
@@ -21,6 +20,7 @@ import { theme } from '../styles/theme';
 import { EyeIcon, EyeOffIcon } from '../components/icons';
 import { keychainService } from '../services/keychainService';
 import { authService } from '../services/authService';
+import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 
 const { height } = Dimensions.get('window');
 
@@ -29,6 +29,14 @@ interface LoginFormData {
   user: string;
   password: string;
 }
+
+interface BiometricResult {
+  error?: string;
+  message?: string;
+  code?: string | number;
+  [key: string]: any;
+}
+
 
 interface ErrorState {
   message: string[];
@@ -39,20 +47,40 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+
+  
   // Estados principales
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [canUseBiometrics, setCanUseBiometrics] = useState(false);
+
+    useEffect(() => {
+    // Verificar el permiso de Face ID cuando el componente se monta
+    request(PERMISSIONS.IOS.FACE_ID).then((result) => {
+      if (result === RESULTS.GRANTED) {
+        console.log('Permiso concedido para Face ID');
+      } else {
+        console.log('Permiso denegado para Face ID');
+        Alert.alert('Permiso necesario', 'Por favor, habilita el Face ID para continuar.');
+      }
+    });
+  }, []); // Se ejecuta solo una vez cuando el componente se monta
+
+  // ...existing code...
   // Al montar, comprobar si biometría está activada y disponible
-  React.useEffect(() => {
+  useEffect(() => {
     const checkBiometrics = async () => {
       try {
+        console.log('[Biometría] Comprobando estado inicial...');
         const enabled = await keychainService.getBiometricsEnabled();
+        console.log('[Biometría] keychainService.getBiometricsEnabled:', enabled);
         const canUse = await authService.canUseBiometrics();
+        console.log('[Biometría] authService.canUseBiometrics:', canUse);
         setBiometricsEnabled(!!enabled);
         setCanUseBiometrics(!!canUse);
       } catch (e) {
+        console.error('[Biometría] Error comprobando estado:', e);
         setBiometricsEnabled(false);
         setCanUseBiometrics(false);
       }
@@ -103,7 +131,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     try {
       // Simular llamada a la API de login
-      console.log('Login attempt:', {
+      console.log('[Login] Login attempt:', {
         user: formData.user,
         password: formData.password,
       });
@@ -114,21 +142,34 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       // Simular respuesta exitosa
       if (formData.user === 'admin' && formData.password === 'admin') {
         // Guardar credenciales de usuario
+        console.log('[Login] Guardando credenciales en keychainService...');
         await keychainService.saveUserCredentials({
           username: formData.user,
           password: formData.password,
         });
+        // Guardar también en el keychain genérico para biometría
+        await keychainService.saveGenericCredentials({
+          username: formData.user,
+          password: formData.password,
+        });
 
+        // Trazas biometría
+        console.log('[Biometría] Estado tras login:', {
+          biometricsEnabled,
+          canUseBiometrics
+        });
         // Preguntar si desea activar biometría si no está ya activada
         if (!biometricsEnabled && canUseBiometrics) {
+          console.log('[Biometría] Mostrando alerta para activar biometría...');
           Alert.alert(
             'Activar Biometría',
             '¿Deseas activar la autenticación biométrica para futuros accesos?',
             [
-              { text: 'No', style: 'cancel' },
+              { text: 'No', style: 'cancel', onPress: () => console.log('[Biometría] Usuario NO activa biometría') },
               { 
                 text: 'Sí', 
                 onPress: async () => {
+                  console.log('[Biometría] Usuario activa biometría, guardando en keychainService...');
                   await keychainService.setBiometricsEnabled(true);
                   setBiometricsEnabled(true);
                 }
@@ -138,19 +179,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
 
         if (onLoginSuccess) {
+          console.log('[Login] onLoginSuccess callback');
           onLoginSuccess();
         } else {
           Alert.alert('Éxito', 'Login exitoso', [
-            { text: 'OK', onPress: () => console.log('Redirect to dashboard') }
+            { text: 'OK', onPress: () => console.log('[Login] Redirect to dashboard') }
           ]);
         }
       } else {
+        console.log('[Login] Usuario o contraseña incorrectos');
         setErrorState({
           message: ['Usuario o contraseña incorrectos']
         });
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[Login] Error en login:', error);
       setErrorState({
         message: ['Error de conexión. Inténtelo de nuevo.']
       });
@@ -248,30 +291,54 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     )}
                   </Button>
                   {/* Botón Face ID solo si biometría activada y disponible */}
-                  {biometricsEnabled && canUseBiometrics && (
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      style={styles.loginButton}
-                      onPress={async () => {
-                        setIsLoading(true);
-                        try {
-                          const result = await authService.authenticateWithBiometrics();
-                          if (result) {
-                            if (onLoginSuccess) onLoginSuccess();
-                          } else {
-                            Alert.alert('Error', 'Autenticación biométrica fallida');
-                          }
-                        } catch (e) {
-                          Alert.alert('Error', 'No se pudo usar Face ID');
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      }}
-                    >
-                      Iniciar con Face ID
-                    </Button>
-                  )}
+{biometricsEnabled && canUseBiometrics && (
+  <Button
+    variant="outlined"
+    color="secondary"
+    style={styles.loginButton}
+    onPress={async () => {
+      setIsLoading(true);
+      console.log('[Biometría] Botón Face ID pulsado, iniciando authService.authenticateWithBiometrics...');
+      try {
+        const result = await authService.authenticateWithBiometrics();
+        console.log('[Biometría] Resultado authenticateWithBiometrics:', result);
+
+        if (result === true) {
+          console.log('[Biometría] Autenticación biométrica exitosa');
+          if (onLoginSuccess) onLoginSuccess();
+        } else if (result && typeof result === 'object') {
+          const biometricResult = result as BiometricResult;
+          let msg = 'Autenticación biométrica fallida.';
+          if ('error' in biometricResult && biometricResult.error)
+            msg += `\nError: ${String(biometricResult.error)}`;
+          if ('message' in biometricResult && biometricResult.message)
+            msg += `\nMensaje: ${String(biometricResult.message)}`;
+          if ('code' in biometricResult && biometricResult.code)
+            msg += `\nCódigo: ${String(biometricResult.code)}`;
+          Alert.alert('Error', msg);
+        } else {
+          console.log('[Biometría] Autenticación biométrica fallida, valor:', result);
+          Alert.alert('Error', `Autenticación biométrica fallida. Valor devuelto: ${JSON.stringify(result)}`);
+        }
+      } catch (e) {
+        console.error('[Biometría] Error usando Face ID:', e);
+        let errorMsg = 'No se pudo usar Face ID.';
+        if (e && typeof e === 'object' && 'message' in e && (e as any).message) {
+          errorMsg += `\n${String((e as any).message)}`;
+        } else {
+          errorMsg += `\n${JSON.stringify(e)}`;
+        }
+        Alert.alert('Error', errorMsg);
+      } finally {
+        setIsLoading(false);
+      }
+    }}
+  >
+    Iniciar con Face ID
+  </Button>
+)}
+
+
                 </View>
               </View>
             </View>
