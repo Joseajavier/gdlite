@@ -55,6 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [canUseBiometrics, setCanUseBiometrics] = useState(false);
 
+  {/* 
     useEffect(() => {
     // Verificar el permiso de Face ID cuando el componente se monta
     request(PERMISSIONS.IOS.FACE_ID).then((result) => {
@@ -65,9 +66,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         Alert.alert('Permiso necesario', 'Por favor, habilita el Face ID para continuar.');
       }
     });
-  }, []); // Se ejecuta solo una vez cuando el componente se monta
+  }, []); // Se ejecuta solo una vez cuando el componente se monta */}
 
-  // ...existing code...
   // Al montar, comprobar si biometría está activada y disponible
   useEffect(() => {
     const checkBiometrics = async () => {

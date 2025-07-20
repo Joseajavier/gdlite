@@ -1,6 +1,7 @@
 // authService.ts
 
 import * as Keychain from 'react-native-keychain';
+import ReactNativeBiometrics from 'react-native-biometrics';
 
 // Puedes añadir otros métodos según necesites para tu login, tokens, etc.
 
@@ -16,27 +17,17 @@ export async function canUseBiometrics(): Promise<boolean> {
   }
 }
 
-// Lanza el prompt de Face ID / Touch ID usando las credenciales guardadas
+// Lanza el prompt de Face ID / Touch ID usando react-native-biometrics
 export async function authenticateWithBiometrics(): Promise<boolean> {
   try {
-    // Comprobar si hay credenciales guardadas antes de lanzar el prompt
-    const hasCredentials = await Keychain.getGenericPassword();
-    if (!hasCredentials) {
-      console.warn('[authService] No hay credenciales guardadas en el Keychain genérico.');
-      // Opcional: puedes mostrar un mensaje al usuario aquí si lo llamas desde la UI
+    const rnBiometrics = new ReactNativeBiometrics();
+    const { available } = await rnBiometrics.isSensorAvailable();
+    if (!available) {
+      console.warn('[authService] No hay sensor biométrico disponible');
       return false;
     }
-    // Lanzar el prompt de biometría (forzar FaceID/TouchID)
-    const credentials = await Keychain.getGenericPassword({
-      authenticationPrompt: {
-        title: 'Iniciar sesión con biometría',
-        subtitle: 'Autentícate para acceder',
-        description: '',
-        cancel: 'Cancelar',
-      },
-      authenticationType: Keychain.AUTHENTICATION_TYPE.BIOMETRICS,
-    });
-    if (credentials) {
+    const { success } = await rnBiometrics.simplePrompt({ promptMessage: 'Autenticación necesaria para acceder' });
+    if (success) {
       console.log('[authService] Prompt biométrico mostrado y autenticación OK');
       return true;
     } else {
@@ -48,8 +39,6 @@ export async function authenticateWithBiometrics(): Promise<boolean> {
     return false;
   }
 }
-
-// Si tienes más métodos propios, déjalos aquí debajo:
 
 // Ejemplo genérico para login normal (puedes adaptarlo a tu backend)
 export async function login(user: string, password: string): Promise<boolean> {
