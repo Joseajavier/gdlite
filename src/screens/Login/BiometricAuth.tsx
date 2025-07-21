@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { Typography } from '../components/Typography';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { theme } from '../styles/theme';
+import { Typography } from '../../components/Typography';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { theme } from '../../styles/theme';
 
 interface BiometricAuthProps {
   onBiometricSuccess?: () => void;

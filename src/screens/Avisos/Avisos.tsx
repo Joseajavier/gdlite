@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { Typography } from '../components/Typography';
-import { theme } from '../styles/theme';
+import { RootStackParamList } from '../../navigation/AppNavigator';
+import { Typography } from '../../components/Typography';
+import { theme } from '../../styles/theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

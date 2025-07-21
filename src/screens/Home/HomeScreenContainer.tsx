@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 import HomeScreen from './HomeScreen';
-import { keychainService } from '../services/keychainService';
+import { keychainService } from '../../services/keychainService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

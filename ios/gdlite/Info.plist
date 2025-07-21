@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
+    <string>es</string>
     <key>CFBundleDisplayName</key>
     <string>gdlite</string>
     <key>CFBundleExecutable</key>
@@ -41,9 +41,26 @@
     <true/>
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
+    <!-- Eliminada referencia a MaterialIcons.ttf -->
+    <key>UIAppFonts</key>
+    <array>
+      <string>MaterialIcons.ttf</string>
+      <string>FontAwesome.ttf</string>
+      <string>MaterialCommunityIcons.ttf</string>
+      <string>Ionicons.ttf</string>
+      <string>Feather.ttf</string>
+      <string>AntDesign.ttf</string>
+      <string>Entypo.ttf</string>
+      <string>EvilIcons.ttf</string>
+      <string>Fontisto.ttf</string>
+      <string>Foundation.ttf</string>
+      <string>Octicons.ttf</string>
+      <string>SimpleLineIcons.ttf</string>
+      <string>Zocial.ttf</string>
+    </array>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
-        <string>arm64</string>
+      <string>arm64</string>
     </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>

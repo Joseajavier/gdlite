@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, SafeAreaView, StatusBar, ScrollView, TouchableOpacity, Modal, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { Typography } from '../components/Typography';
-import { theme } from '../styles/theme';
+import { RootStackParamList } from '../../navigation/AppNavigator';
+import { Typography } from '../../components/Typography';
+import { theme } from '../../styles/theme';
+import Navbar from '../../components/Navbar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -82,27 +74,8 @@ const Portafirmas: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
-      
+      <Navbar onUserMenuToggle={handleUserMenuToggle} rightContent={null} />
       <View style={styles.content}>
-        {/* Navbar Content - Adaptado de GdAdmin */}
-        <View style={styles.navbarContent}>
-          {/* Left Section */}
-          <View style={styles.navbarLeftSection}>
-            <TouchableOpacity style={styles.navToggle}>
-              <Typography variant="h4" style={styles.navIcon}>☰</Typography>
-            </TouchableOpacity>
-            <View style={styles.logoContainer}>
-              <Typography variant="h6" style={styles.logoText}>Portafirmas</Typography>
-            </View>
-          </View>
-
-          {/* Right Section */}
-          <View style={styles.navbarRightSection}>
-            <TouchableOpacity onPress={handleUserMenuToggle} style={styles.navbarUserAction}>
-              <Typography variant="h6" style={styles.navIcon}>👤</Typography>
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* User Menu Dropdown */}
         {showUserMenu && (
@@ -170,7 +143,7 @@ const Portafirmas: React.FC = () => {
             style={styles.navItem}
             onPress={() => handleBottomNavigation('home')}
           >
-            <Typography style={styles.navItemIcon}>🏠</Typography>
+            <Image source={require('../../assets/images/home.gif')} style={styles.navIconGif} resizeMode="contain" />
             <Typography style={styles.navItemText}>Inicio</Typography>
           </TouchableOpacity>
 
@@ -178,7 +151,7 @@ const Portafirmas: React.FC = () => {
             style={[styles.navItem, styles.navItemActive]}
             onPress={() => handleBottomNavigation('portafirmas')}
           >
-            <Typography style={styles.navItemIconActive}>🖊️</Typography>
+            <Image source={require('../../assets/images/firma-unscreen.gif')} style={styles.navIconGifActive} resizeMode="contain" />
             <Typography style={styles.navItemTextActive}>Portafirmas</Typography>
           </TouchableOpacity>
 
@@ -186,7 +159,7 @@ const Portafirmas: React.FC = () => {
             style={styles.navItem}
             onPress={() => handleBottomNavigation('avisos')}
           >
-            <Typography style={styles.navItemIcon}>📢</Typography>
+            <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
             <Typography style={styles.navItemText}>Avisos</Typography>
           </TouchableOpacity>
 
@@ -194,7 +167,7 @@ const Portafirmas: React.FC = () => {
             style={styles.navItem}
             onPress={() => handleBottomNavigation('calendario')}
           >
-            <Typography style={styles.navItemIcon}>📅</Typography>
+            <Image source={require('../../assets/images/calendar.gif')} style={styles.navIconGif} resizeMode="contain" />
             <Typography style={styles.navItemText}>Calendario</Typography>
           </TouchableOpacity>
 
@@ -202,7 +175,7 @@ const Portafirmas: React.FC = () => {
             style={styles.navItem}
             onPress={() => handleBottomNavigation('ia')}
           >
-            <Typography style={styles.navItemIcon}>🤖</Typography>
+            <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGif} resizeMode="contain" />
             <Typography style={styles.navItemText}>IA</Typography>
           </TouchableOpacity>
         </View>
@@ -369,21 +342,16 @@ const styles = StyleSheet.create({
   navItemActive: {
     backgroundColor: '#666CFF',
   },
-  navItemIcon: {
-    fontSize: 20,
+  navIconGif: {
+    width: 28,
+    height: 28,
     marginBottom: 4,
-    color: '#999999',
-  },
-  navItemIconActive: {
-    fontSize: 20,
-    marginBottom: 4,
-    color: '#FFFFFF',
   },
   navIconGifActive: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     marginBottom: 4,
-    tintColor: '#FFFFFF',
+    // No tintColor para mantener el color original del gif
   },
   navItemText: {
     fontSize: 10,

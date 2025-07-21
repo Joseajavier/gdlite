@@ -9,10 +9,10 @@ import {
   ActivityIndicator,
   Clipboard,
 } from 'react-native';
-import { Typography } from '../components/Typography';
-import { Button } from '../components/Button';
-import { TextField } from '../components/TextField';
-import { Card } from '../components/Card';
+import { Typography } from '../../components/Typography';
+import { Button } from '../../components/Button';
+import { TextField } from '../../components/TextField';
+import { Card } from '../../components/Card';
 import { theme } from '../styles/theme';
 import { AppConfigData } from '../utils/storage';
 

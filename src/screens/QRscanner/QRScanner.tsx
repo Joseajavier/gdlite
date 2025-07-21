@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Animated, Easing, Platform, SafeAreaView, View, Alert, StyleSheet, Text } from 'react-native';
-import { Typography } from '../components/Typography';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { theme } from '../styles/theme';
+import { Typography } from '../../components/Typography';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { theme } from '../../styles/theme';
 import { check, request, PERMISSIONS, RESULTS, openSettings } from 'react-native-permissions';
-import { keychainService, AppConfigData } from '../services/keychainService';
-import { validateQRData, qrDataToAppConfig, getQRDataSummary } from '../utils/qrValidators';
+import { keychainService, AppConfigData } from '../../services/keychainService';
+import { validateQRData, qrDataToAppConfig, getQRDataSummary } from '../../utils/qrValidators';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
 interface QRScannerProps {
