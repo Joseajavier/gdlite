@@ -171,12 +171,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
       const validationResult = validateQRData(data);
       if (!validationResult.isValid) {
         console.log('QR no válido:', validationResult.errors);  // Log de errores si el QR no es válido
+        // Permitir volver a escanear inmediatamente
+        setTimeout(() => setScanned(false), 500);
         Alert.alert(
           'QR Inválido',
           `El código QR no es válido:\n\n${validationResult.errors.join('\n')}`,
-          [{ text: 'OK' }]
+          [{ text: 'OK', onPress: () => setScanned(false) }]
         );
-        setScanned(false); // Permitir volver a escanear
         return;
       }
       const qrData = validationResult.data!;
@@ -192,8 +193,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
       );
     } catch (error) {
       console.error('[QRScanner] Error parsing QR data:', error);
-      Alert.alert('Error', 'No se pudo procesar el código QR. Asegúrate de que contiene datos válidos.', [{ text: 'OK' }]);
-      setScanned(false); // Permitir volver a escanear
+      setTimeout(() => setScanned(false), 500);
+      Alert.alert('Error', 'No se pudo procesar el código QR. Asegúrate de que contiene datos válidos.', [{ text: 'OK', onPress: () => setScanned(false) }]);
     }
   };
 
@@ -290,15 +291,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
               color="secondary"
               onPress={() => handleQRCodeScanned({
                 data: JSON.stringify({
-                  apiBaseUrl: 'https://api.gdlite.com',
-                  userId: 'admin',
-                  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demoToken123456',
-                  refreshToken: 'refresh_token_demo',
-                  organizationId: 'org_demo_001',
-                  clientId: 'client_demo_app',
-                  clientSecret: 'client_secret_demo',
-                  environment: 'staging',
-                  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                  TokenAplicacion: '002D7ED9FB845C41B2E4A28F6A041460',
+                  IdUsuario: '36',
+                  NombreCompleto: 'Juan Pérez',
+                  ImgUsuario: '1.png',
+                  UrlSwagger: 'https://gestdocj.add4u.com/GestDocX/GestDocX/swagger-ui/index.html',
+                  ColorPrimario: 'success',
                 })
               })}
               style={styles.testIconButton}

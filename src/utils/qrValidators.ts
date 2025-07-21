@@ -4,24 +4,21 @@ import { AppConfigData } from '../services/keychainService';
  * Campos mínimos requeridos en el QR
  */
 const REQUIRED_QR_FIELDS = [
-  'apiBaseUrl',
-  'userId',
-  'token',
+  'TokenAplicacion',
+  'IdUsuario',
+  'UrlSwagger',
 ] as const;
 
 /**
  * Interfaz para los datos que pueden venir en el QR
  */
 export interface QRConfigData {
-  apiBaseUrl: string;
-  userId: string;
-  token: string;
-  refreshToken?: string;
-  organizationId?: string;
-  clientId?: string;
-  clientSecret?: string;
-  environment?: 'production' | 'staging' | 'development';
-  expiresAt?: string; // ISO string
+  TokenAplicacion: string;
+  IdUsuario: string;
+  NombreCompleto?: string;
+  ImgUsuario?: string;
+  UrlSwagger: string;
+  ColorPrimario?: string;
 }
 
 /**
@@ -75,7 +72,7 @@ export function isValidFutureDate(isoString: string): boolean {
  */
 export function validateQRData(jsonString: string): QRValidationResult {
   const errors: string[] = [];
-  
+
   // 1. Verificar que sea JSON válido
   if (!isValidJSON(jsonString)) {
     return {
@@ -110,41 +107,27 @@ export function validateQRData(jsonString: string): QRValidationResult {
   }
 
   // 4. Validaciones específicas para campos requeridos
-  if (data.apiBaseUrl && !isValidURL(data.apiBaseUrl)) {
-    errors.push('apiBaseUrl debe ser una URL válida (http:// o https://)');
+  if (data.UrlSwagger && !isValidURL(data.UrlSwagger)) {
+    errors.push('UrlSwagger debe ser una URL válida (http:// o https://)');
   }
 
-  if (data.userId && data.userId.length < 3) {
-    errors.push('userId debe tener al menos 3 caracteres');
+  if (data.IdUsuario && data.IdUsuario.length < 1) {
+    errors.push('IdUsuario debe tener al menos 1 caracter');
   }
 
-  if (data.token && data.token.length < 10) {
-    errors.push('token debe tener al menos 10 caracteres');
+  if (data.TokenAplicacion && data.TokenAplicacion.length < 10) {
+    errors.push('TokenAplicacion debe tener al menos 10 caracteres');
   }
 
   // 5. Validaciones para campos opcionales
-  if (data.environment && !['production', 'staging', 'development'].includes(data.environment)) {
-    errors.push('environment debe ser: production, staging o development');
+  if (data.ColorPrimario && typeof data.ColorPrimario !== 'string') {
+    errors.push('ColorPrimario debe ser una cadena de texto');
   }
-
-  if (data.expiresAt && !isValidFutureDate(data.expiresAt)) {
-    errors.push('expiresAt debe ser una fecha ISO válida y futura');
+  if (data.NombreCompleto && typeof data.NombreCompleto !== 'string') {
+    errors.push('NombreCompleto debe ser una cadena de texto');
   }
-
-  if (data.refreshToken && typeof data.refreshToken !== 'string') {
-    errors.push('refreshToken debe ser una cadena de texto');
-  }
-
-  if (data.organizationId && typeof data.organizationId !== 'string') {
-    errors.push('organizationId debe ser una cadena de texto');
-  }
-
-  if (data.clientId && typeof data.clientId !== 'string') {
-    errors.push('clientId debe ser una cadena de texto');
-  }
-
-  if (data.clientSecret && typeof data.clientSecret !== 'string') {
-    errors.push('clientSecret debe ser una cadena de texto');
+  if (data.ImgUsuario && typeof data.ImgUsuario !== 'string') {
+    errors.push('ImgUsuario debe ser una cadena de texto');
   }
 
   // 6. Si hay errores, retornar resultado inválido
@@ -157,18 +140,13 @@ export function validateQRData(jsonString: string): QRValidationResult {
 
   // 7. Construir datos válidos
   const validData: QRConfigData = {
-    apiBaseUrl: data.apiBaseUrl,
-    userId: data.userId,
-    token: data.token,
+    TokenAplicacion: data.TokenAplicacion,
+    IdUsuario: data.IdUsuario,
+    UrlSwagger: data.UrlSwagger,
   };
-
-  // Agregar campos opcionales si están presentes
-  if (data.refreshToken) validData.refreshToken = data.refreshToken;
-  if (data.organizationId) validData.organizationId = data.organizationId;
-  if (data.clientId) validData.clientId = data.clientId;
-  if (data.clientSecret) validData.clientSecret = data.clientSecret;
-  if (data.environment) validData.environment = data.environment;
-  if (data.expiresAt) validData.expiresAt = data.expiresAt;
+  if (data.NombreCompleto) validData.NombreCompleto = data.NombreCompleto;
+  if (data.ImgUsuario) validData.ImgUsuario = data.ImgUsuario;
+  if (data.ColorPrimario) validData.ColorPrimario = data.ColorPrimario;
 
   return {
     isValid: true,
@@ -182,15 +160,16 @@ export function validateQRData(jsonString: string): QRValidationResult {
  */
 export function qrDataToAppConfig(qrData: QRConfigData): AppConfigData {
   return {
-    apiBaseUrl: qrData.apiBaseUrl,
-    userId: qrData.userId,
-    token: qrData.token,
-    refreshToken: qrData.refreshToken || '',
-    organizationId: qrData.organizationId || '',
-    clientId: qrData.clientId || '',
-    clientSecret: qrData.clientSecret || '',
-    environment: qrData.environment || 'production',
+    apiBaseUrl: qrData.UrlSwagger,
+    userId: qrData.IdUsuario,
+    token: qrData.TokenAplicacion,
+    refreshToken: '',
+    organizationId: '',
+    clientId: '',
+    clientSecret: '',
+    environment: 'production',
     lastLoginDate: new Date().toISOString(),
+    // Puedes agregar otros campos personalizados si AppConfigData lo permite
   };
 }
 
@@ -199,17 +178,13 @@ export function qrDataToAppConfig(qrData: QRConfigData): AppConfigData {
  */
 export function generateExampleQRData(): string {
   const exampleData: QRConfigData = {
-    apiBaseUrl: 'https://api.gdlite.com',
-    userId: 'user123',
-    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example',
-    refreshToken: 'refresh_token_example',
-    organizationId: 'org_gdlite_001',
-    clientId: 'client_gdlite_app',
-    clientSecret: 'client_secret_secure',
-    environment: 'production',
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 días
+    TokenAplicacion: '002D7ED9FB845C41B2E4A28F6A041460',
+    IdUsuario: '36',
+    NombreCompleto: 'Juan Pérez',
+    ImgUsuario: '1.png',
+    UrlSwagger: 'https://gestdocj.add4u.com/GestDocX/GestDocX/swagger-ui/index.html',
+    ColorPrimario: 'success',
   };
-
   return JSON.stringify(exampleData, null, 2);
 }
 
@@ -227,17 +202,11 @@ export function hasMinimumRequiredFields(data: any): boolean {
  */
 export function getQRDataSummary(qrData: QRConfigData): string {
   const fields = [];
-  
-  fields.push(`URL: ${qrData.apiBaseUrl}`);
-  fields.push(`Usuario: ${qrData.userId}`);
-  fields.push(`Token: ${qrData.token.substring(0, 20)}...`);
-  
-  if (qrData.organizationId) fields.push(`Organización: ${qrData.organizationId}`);
-  if (qrData.environment) fields.push(`Entorno: ${qrData.environment}`);
-  if (qrData.expiresAt) {
-    const expiryDate = new Date(qrData.expiresAt);
-    fields.push(`Expira: ${expiryDate.toLocaleDateString()}`);
-  }
-  
+  fields.push(`Token: ${qrData.TokenAplicacion}`);
+  fields.push(`Usuario: ${qrData.IdUsuario}`);
+  if (qrData.NombreCompleto) fields.push(`Nombre: ${qrData.NombreCompleto}`);
+  if (qrData.ImgUsuario) fields.push(`Imagen: ${qrData.ImgUsuario}`);
+  fields.push(`URL Swagger: ${qrData.UrlSwagger}`);
+  if (qrData.ColorPrimario) fields.push(`Color: ${qrData.ColorPrimario}`);
   return fields.join('\n');
 }
