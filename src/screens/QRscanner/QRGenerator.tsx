@@ -7,14 +7,14 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Clipboard,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Typography } from '../../components/Typography';
 import { Button } from '../../components/Button';
 import { TextField } from '../../components/TextField';
 import { Card } from '../../components/Card';
-import { theme } from '../styles/theme';
-import { AppConfigData } from '../utils/storage';
+import { theme } from '../../styles/theme';
+import { AppConfigData } from '../../utils/storage';
 
 interface QRGeneratorProps {
   onClose?: () => void;

@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import QRScanner from './QRScanner';
+import MainLayout from '../../components/MainLayout';
 import { AppConfigData } from '../../services/keychainService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -22,10 +23,12 @@ const QRScannerContainer: React.FC = () => {
   };
 
   return (
-    <QRScanner
-      onScanSuccess={handleScanSuccess}
-      onScanCancel={handleScanCancel}
-    />
+    <MainLayout>
+      <QRScanner
+        onScanSuccess={handleScanSuccess}
+        onScanCancel={handleScanCancel}
+      />
+    </MainLayout>
   );
 };
 

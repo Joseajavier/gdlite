@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  Alert,
-  Text,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, Image, Text } from 'react-native';
+import MainLayout from '../../components/MainLayout';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -211,28 +202,46 @@ const Calendario: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
-      
+    <MainLayout onUserMenuToggle={handleUserMenuToggle} bottomNav={
+      <View style={styles.bottomNavigation}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('home')}
+        >
+          <Image source={require('../../assets/images/home.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Inicio</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('portafirmas')}
+        >
+          <Image source={require('../../assets/images/firma-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Portafirmas</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('avisos')}
+        >
+          <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Avisos</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.navItem, styles.navItemActive]}
+          onPress={() => handleBottomNavigation('calendario')}
+        >
+          <Image source={require('../../assets/images/calendar.gif')} style={styles.navIconGifActive} resizeMode="contain" />
+          <Typography style={styles.navItemTextActive}>Calendario</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('ia')}
+        >
+          <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>IA</Typography>
+        </TouchableOpacity>
+      </View>
+    }>
       <View style={styles.content}>
-        {/* Navbar Content */}
-        <View style={styles.navbarContent}>
-          <View style={styles.navbarLeftSection}>
-            <TouchableOpacity style={styles.navToggle}>
-              <Typography variant="h4" style={styles.navIcon}>☰</Typography>
-            </TouchableOpacity>
-            <View style={styles.logoContainer}>
-              <Typography variant="h6" style={styles.logoText}>Calendario</Typography>
-            </View>
-          </View>
-
-          <View style={styles.navbarRightSection}>
-            <TouchableOpacity onPress={handleUserMenuToggle} style={styles.navbarUserAction}>
-              <Typography variant="h6" style={styles.navIcon}>👤</Typography>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* User Menu Dropdown */}
         {showUserMenu && (
           <View style={styles.userMenuContainer}>
@@ -283,106 +292,63 @@ const Calendario: React.FC = () => {
 
         {/* Main Content Area */}
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {/* Calendar Header */}
-          <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={getPreviousMonth} style={styles.monthButton}>
-              <Text style={styles.monthButtonText}>‹</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.monthContainer}>
-              <Text style={styles.monthText}>
-                {getMonthName(currentDate)} {currentDate.getFullYear()}
-              </Text>
-            </View>
-            
-            <TouchableOpacity onPress={getNextMonth} style={styles.monthButton}>
-              <Text style={styles.monthButtonText}>›</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Days of Week */}
-          <View style={styles.weekDaysContainer}>
-            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
-              <View key={day} style={styles.weekDay}>
-                <Text style={styles.weekDayText}>{day}</Text>
+          <View style={styles.calendarCard}>
+            {/* Calendar Header */}
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity onPress={getPreviousMonth} style={styles.monthButton}>
+                <Text style={styles.monthButtonText}>‹</Text>
+              </TouchableOpacity>
+              <View style={styles.monthContainer}>
+                <Text style={styles.monthText}>
+                  {getMonthName(currentDate)} {currentDate.getFullYear()}
+                </Text>
               </View>
-            ))}
-          </View>
+              <TouchableOpacity onPress={getNextMonth} style={styles.monthButton}>
+                <Text style={styles.monthButtonText}>›</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Calendar Grid */}
-          <View style={styles.calendarGrid}>
-            {renderCalendar()}
-          </View>
-
-          {/* Events for Selected Date */}
-          <View style={styles.eventsSection}>
-            <Text style={styles.eventsSectionTitle}>
-              Eventos para {selectedDate.getDate()} de {getMonthName(selectedDate)}
-            </Text>
-            
-            {getEventsForSelectedDate().length > 0 ? (
-              getEventsForSelectedDate().map((event) => (
-                <View key={event.id} style={styles.eventCard}>
-                  <View style={styles.eventTime}>
-                    <Text style={styles.eventTimeText}>{event.time}</Text>
-                  </View>
-                  <View style={styles.eventContent}>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
-                  </View>
+            {/* Days of Week */}
+            <View style={styles.weekDaysContainer}>
+              {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
+                <View key={day} style={styles.weekDay}>
+                  <Text style={styles.weekDayText}>{day}</Text>
                 </View>
-              ))
-            ) : (
-              <Text style={styles.noEventsText}>No hay eventos programados</Text>
-            )}
+              ))}
+            </View>
+
+            {/* Calendar Grid */}
+            <View style={styles.calendarGrid}>
+              {renderCalendar()}
+            </View>
+
+            {/* Events for Selected Date */}
+            <View style={styles.eventsSection}>
+              <Text style={styles.eventsSectionTitle}>
+                Eventos para {selectedDate.getDate()} de {getMonthName(selectedDate)}
+              </Text>
+              {getEventsForSelectedDate().length > 0 ? (
+                getEventsForSelectedDate().map((event) => (
+                  <View key={event.id} style={styles.eventCard}>
+                    <View style={styles.eventTime}>
+                      <Text style={styles.eventTimeText}>{event.time}</Text>
+                    </View>
+                    <View style={styles.eventContent}>
+                      <Text style={styles.eventTitle}>{event.title}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noEventsText}>No hay eventos programados</Text>
+              )}
+            </View>
           </View>
+
         </ScrollView>
-
-        {/* Bottom Navigation */}
-        <View style={styles.bottomNavigation}>
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('home')}
-          >
-            <Typography style={styles.navItemIcon}>🏠</Typography>
-            <Typography style={styles.navItemText}>Inicio</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('portafirmas')}
-          >
-            <Typography style={styles.navItemIcon}>🖊️</Typography>
-            <Typography style={styles.navItemText}>Portafirmas</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('avisos')}
-          >
-            <Typography style={styles.navItemIcon}>📢</Typography>
-            <Typography style={styles.navItemText}>Avisos</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.navItem, styles.navItemActive]}
-            onPress={() => handleBottomNavigation('calendario')}
-          >
-            <Typography style={styles.navItemIconActive}>📅</Typography>
-            <Typography style={styles.navItemTextActive}>Calendario</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('ia')}
-          >
-            <Typography style={styles.navItemIcon}>🤖</Typography>
-            <Typography style={styles.navItemText}>IA</Typography>
-          </TouchableOpacity>
-        </View>
       </View>
-    </SafeAreaView>
+    </MainLayout>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -664,10 +630,16 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   navIconGif: {
-    width: 20,
-    height: 20,
+    width: 28,
+    height: 28,
     marginBottom: 4,
-    tintColor: '#999999',
+    backgroundColor: 'transparent',
+  },
+  navIconGifActive: {
+    width: 28,
+    height: 28,
+    marginBottom: 4,
+    // No tintColor para mantener el color original del gif
   },
   navItemIconActive: {
     fontSize: 20,
@@ -685,6 +657,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  calendarCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
 });
 

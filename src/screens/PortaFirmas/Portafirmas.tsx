@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView, StatusBar, ScrollView, TouchableOpacity, Modal, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Typography } from '../../components/Typography';
 import { theme } from '../../styles/theme';
-import Navbar from '../../components/Navbar';
+import MainLayout from '../../components/MainLayout';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -72,9 +72,45 @@ const Portafirmas: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
-      <Navbar onUserMenuToggle={handleUserMenuToggle} rightContent={null} />
+    <MainLayout onUserMenuToggle={handleUserMenuToggle} bottomNav={
+      <View style={styles.bottomNavigation}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('home')}
+        >
+          <Image source={require('../../assets/images/home.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Inicio</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.navItem, styles.navItemActive]}
+          onPress={() => handleBottomNavigation('portafirmas')}
+        >
+          <Image source={require('../../assets/images/firma-unscreen.gif')} style={styles.navIconGifActive} resizeMode="contain" />
+          <Typography style={styles.navItemTextActive}>Portafirmas</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('avisos')}
+        >
+          <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Avisos</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('calendario')}
+        >
+          <Image source={require('../../assets/images/calendar.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Calendario</Typography>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => handleBottomNavigation('ia')}
+        >
+          <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>IA</Typography>
+        </TouchableOpacity>
+      </View>
+    }>
       <View style={styles.content}>
 
         {/* User Menu Dropdown */}
@@ -137,50 +173,8 @@ const Portafirmas: React.FC = () => {
           </View>
         </ScrollView>
 
-        {/* Bottom Navigation */}
-        <View style={styles.bottomNavigation}>
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('home')}
-          >
-            <Image source={require('../../assets/images/home.gif')} style={styles.navIconGif} resizeMode="contain" />
-            <Typography style={styles.navItemText}>Inicio</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.navItem, styles.navItemActive]}
-            onPress={() => handleBottomNavigation('portafirmas')}
-          >
-            <Image source={require('../../assets/images/firma-unscreen.gif')} style={styles.navIconGifActive} resizeMode="contain" />
-            <Typography style={styles.navItemTextActive}>Portafirmas</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('avisos')}
-          >
-            <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
-            <Typography style={styles.navItemText}>Avisos</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('calendario')}
-          >
-            <Image source={require('../../assets/images/calendar.gif')} style={styles.navIconGif} resizeMode="contain" />
-            <Typography style={styles.navItemText}>Calendario</Typography>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem}
-            onPress={() => handleBottomNavigation('ia')}
-          >
-            <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGif} resizeMode="contain" />
-            <Typography style={styles.navItemText}>IA</Typography>
-          </TouchableOpacity>
-        </View>
       </View>
-    </SafeAreaView>
+    </MainLayout>
   );
 };
 

@@ -9,7 +9,7 @@ import { theme } from '../../styles/theme';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const Avisos: React.FC = () => {
+const IA: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -55,16 +55,19 @@ const Avisos: React.FC = () => {
   const handleBottomNavigation = (screen: string) => {
     switch (screen) {
       case 'home':
-        navigation.goBack(); // Volver a la pantalla anterior (Home)
+        navigation.goBack();
         break;
       case 'portafirmas':
         navigation.navigate('Portafirmas');
         break;
       case 'avisos':
-        // Ya estamos en avisos, no hacer nada
+        navigation.navigate('Avisos');
         break;
       case 'calendario':
         navigation.navigate('Calendario');
+        break;
+      case 'ia':
+        // Ya estamos en IA
         break;
       default:
         Alert.alert('Navegación', `Funcionalidad de ${screen} en desarrollo`);
@@ -89,11 +92,11 @@ const Avisos: React.FC = () => {
           <Typography style={styles.navItemText}>Portafirmas</Typography>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={[styles.navItem, styles.navItemActive]}
+          style={styles.navItem}
           onPress={() => handleBottomNavigation('avisos')}
         >
-          <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGifActive} resizeMode="contain" />
-          <Typography style={styles.navItemTextActive}>Avisos</Typography>
+          <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
+          <Typography style={styles.navItemText}>Avisos</Typography>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
@@ -103,11 +106,11 @@ const Avisos: React.FC = () => {
           <Typography style={styles.navItemText}>Calendario</Typography>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.navItem}
+          style={[styles.navItem, styles.navItemActive]}
           onPress={() => handleBottomNavigation('ia')}
         >
-          <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGif} resizeMode="contain" />
-          <Typography style={styles.navItemText}>IA</Typography>
+          <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGifActive} resizeMode="contain" />
+          <Typography style={styles.navItemTextActive}>IA</Typography>
         </TouchableOpacity>
       </View>
     }>
@@ -164,10 +167,10 @@ const Avisos: React.FC = () => {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           <View style={styles.contentArea}>
             <Typography variant="h3" style={styles.sectionTitle}>
-              Notificaciones y Avisos
+              Inteligencia Artificial
             </Typography>
             <Typography variant="body1" style={styles.sectionSubtitle}>
-              Aquí irán las cards y contenido de avisos importantes
+              Aquí irá la funcionalidad de IA o chat inteligente
             </Typography>
           </View>
         </ScrollView>
@@ -177,10 +180,6 @@ const Avisos: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  // container: {
-  //   flex: 1,
-  //   backgroundColor: theme.colors.background.default,
-  // },
   content: {
     flex: 1,
   },
@@ -208,19 +207,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  logoContainer: {
-    backgroundColor: theme.colors.primary.main,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  logoText: {
-    color: theme.colors.common.white,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  // NavbarContent styles eliminados tras migración a MainLayout
-  // User Menu Dropdown styles
   userMenuContainer: {
     position: 'absolute',
     top: 60,
@@ -264,7 +250,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  // Bottom Navigation styles
   bottomNavigation: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -288,11 +273,6 @@ const styles = StyleSheet.create({
   navItemActive: {
     backgroundColor: '#666CFF',
   },
-  navItemIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-    color: '#999999',
-  },
   navIconGif: {
     width: 28,
     height: 28,
@@ -304,19 +284,6 @@ const styles = StyleSheet.create({
     height: 28,
     marginBottom: 4,
     // No tintColor para mantener el color original del gif
-  },
-  webviewIconContainer: {
-    width: 20,
-    height: 20,
-    marginBottom: 4,
-    borderRadius: 4,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-  },
-  navItemIconActive: {
-    fontSize: 20,
-    marginBottom: 4,
-    color: '#FFFFFF',
   },
   navItemText: {
     fontSize: 10,
@@ -332,4 +299,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Avisos;
+export default IA;
