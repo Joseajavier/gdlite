@@ -20,7 +20,8 @@ import { theme } from '../../styles/theme';
 import { EyeIcon, EyeOffIcon } from '../../components/icons';
 import { keychainService } from '../../services/keychainService';
 import { authService } from '../../services/authService';
-import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
+// Removed unused react-native-permissions import
+import { requestUserPermission } from '../../services/pushNotifications';
 
 const { height } = Dimensions.get('window');
 
@@ -164,21 +165,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return `https://sede.add4u.com/public/GestDoc/loginImages/img${dia}.jpg`;
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<LoginFormData> = {};
-    
-    if (!formData.user.trim()) {
-      newErrors.user = 'Este campo es obligatorio';
-    }
-    // Solo mostrar error de password si el usuario está presente
-    if (formData.user.trim() && !formData.password.trim()) {
-      newErrors.password = 'Este campo es obligatorio';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Mover validateForm dentro de handleLogin para evitar advertencia de dependencias
 
   const handleLogin = React.useCallback(async () => {
+    // Mover validateForm aquí para evitar advertencia de dependencias
+    const validateForm = (): boolean => {
+      const newErrors: Partial<LoginFormData> = {};
+      if (!formData.user.trim()) {
+        newErrors.user = 'Este campo es obligatorio';
+      }
+      // Solo mostrar error de password si el usuario está presente
+      if (formData.user.trim() && !formData.password.trim()) {
+        newErrors.password = 'Este campo es obligatorio';
+      }
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -233,10 +236,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           );
         }
 
+        // Solicitar permisos push solo desde el servicio pushNotifications
         if (onLoginSuccess) {
           console.log('[Login] onLoginSuccess callback');
           onLoginSuccess();
+          await requestUserPermission();
         } else {
+          await requestUserPermission();
           Alert.alert('Éxito', 'Login exitoso', [
             { text: 'OK', onPress: () => console.log('[Login] Redirect to dashboard') }
           ]);
@@ -255,7 +261,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, biometricsEnabled, canUseBiometrics, onLoginSuccess, validateForm]);
+  }, [formData, biometricsEnabled, canUseBiometrics, onLoginSuccess]);
 
   const handleInputChange = (field: keyof LoginFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

@@ -6,28 +6,27 @@ import QRScanner from './QRScanner';
 import MainLayout from '../../components/MainLayout';
 import { AppConfigData } from '../../services/keychainService';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 const QRScannerContainer: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handleScanSuccess = (config: AppConfigData) => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login', params: { config } }],
-    });
-  };
-
-  const handleScanCancel = () => {
-    navigation.goBack();
+  const handleScanSuccess = (code: string) => {
+    let config: AppConfigData | null = null;
+    try {
+      config = JSON.parse(code);
+    } catch (e) {
+      return;
+    }
+    if (config) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login', params: { config } }],
+      });
+    }
   };
 
   return (
     <MainLayout>
-      <QRScanner
-        onScanSuccess={handleScanSuccess}
-        onScanCancel={handleScanCancel}
-      />
+      <QRScanner onScanSuccess={handleScanSuccess} />
     </MainLayout>
   );
 };

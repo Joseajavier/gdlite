@@ -1,3 +1,5 @@
+require_relative '../node_modules/react-native-permissions/scripts/setup'
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -15,27 +17,27 @@ if linkage != nil
 end
 
 target 'gdlite' do
+  use_frameworks! :linkage => :static
+  $RNFirebaseAsStaticFramework = true
+  permissions_path = '../node_modules/react-native-permissions/ios'
+
   config = use_native_modules!
+  pod 'react-native-camera', :path => '../node_modules/react-native-camera'
 
-  # ======= PERMISOS NATIVOS PARA REACT-NATIVE-PERMISSIONS =======
-permissions_path = '../node_modules/react-native-permissions/ios'
-
-pod 'Permission-Camera', :path => "#{permissions_path}/Camera"
-# Si usas FaceID:
-pod 'Permission-FaceID', :path => "#{permissions_path}/FaceID"
-
-
+  # Eliminados pods de permisos innecesarios
+  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
   use_react_native!(
     :path => config[:reactNativePath],
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+end
 
-  post_install do |installer|
-    react_native_post_install(
-      installer,
-      config[:reactNativePath],
-      :mac_catalyst_enabled => false,
-      # :ccache_enabled => true
-    )
-  end
+# ✅ Mueve post_install fuera del target
+post_install do |installer|
+  react_native_post_install(
+    installer,
+    '../node_modules/react-native',
+    :mac_catalyst_enabled => false
+    # :ccache_enabled => true
+  )
 end
