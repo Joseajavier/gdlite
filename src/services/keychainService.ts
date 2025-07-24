@@ -21,6 +21,10 @@ export interface AppConfigData {
   environment?: 'production' | 'staging' | 'development';
   expiresAt?: string; // ISO string
   lastLoginDate?: string;
+  NombreUsuario?: string;
+  NombreCompleto?: string;
+  ImgUsuario?: string;
+  ColorPrimario?: string;
 }
 
 // Interfaz para credenciales de usuario

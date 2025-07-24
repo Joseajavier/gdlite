@@ -20,23 +20,12 @@ import { theme } from '../../styles/theme';
 import { EyeIcon, EyeOffIcon } from '../../components/icons';
 import { keychainService } from '../../services/keychainService';
 import { authService } from '../../services/authService';
-import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
-
 const { height } = Dimensions.get('window');
 
-// Tipos para el formulario
 interface LoginFormData {
   user: string;
   password: string;
 }
-
-interface BiometricResult {
-  error?: string;
-  message?: string;
-  code?: string | number;
-  [key: string]: any;
-}
-
 
 interface ErrorState {
   message: string[];
@@ -47,16 +36,19 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  // Estado para mostrar el último usuario guardado y rellenar el campo usuario siempre
+  // Estado para mostrar el usuario extraído del QR y rellenar el campo usuario
   const [lastUser, setLastUser] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const creds = await keychainService.getUserCredentials();
-        if (creds && creds.username) {
-          setLastUser(creds.username);
-          setFormData({ user: creds.username, password: '' });
+        // Leer config guardada por QR
+        const config = await keychainService.getAppConfig();
+        if (config && (config.userId || config.NombreUsuario)) {
+          // Preferir NombreUsuario si existe, si no userId
+          const usuario = config.NombreUsuario ? config.NombreUsuario : config.userId;
+          setLastUser(usuario);
+          setFormData({ user: usuario, password: '' });
         } else {
           setFormData({ user: '', password: '' });
         }
@@ -76,20 +68,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       try {
         const biometricsEnabled = await keychainService.getBiometricsEnabled();
         const canUseBiometrics = await authService.canUseBiometrics();
-        console.log('[Biometría] biometricsEnabled:', biometricsEnabled, 'canUseBiometrics:', canUseBiometrics);
-        if (biometricsEnabled && canUseBiometrics) {
+        const creds = await keychainService.getUserCredentials();
+        console.log('[Biometría] biometricsEnabled:', biometricsEnabled, 'canUseBiometrics:', canUseBiometrics, 'creds:', creds);
+        // Solo intentar login biométrico si biometricsEnabled, biometría disponible y hay credenciales guardadas
+        if (biometricsEnabled && canUseBiometrics && creds && creds.username && creds.password) {
           // Intentar login biométrico automático
           const success = await authService.authenticateWithBiometrics();
           console.log('[Biometría] Resultado Face ID:', success);
           if (success) {
-            const creds = await keychainService.getUserCredentials();
-            console.log('[Biometría] Credenciales recuperadas:', creds);
-            if (creds && creds.username && creds.password) {
-              setFormData(prev => ({ ...prev, password: creds.password }));
-              setPendingAutoLogin(true);
-            } else {
-              Alert.alert('Login automático', 'Face ID correcto pero no hay credenciales guardadas.');
-            }
+            setFormData(prev => ({ ...prev, password: creds.password }));
+            setPendingAutoLogin(true);
           } else {
             Alert.alert('Login automático', 'Face ID fallido o cancelado.');
           }
@@ -102,7 +90,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     };
     tryBiometricLogin();
     // handleLogin no se incluye en dependencias porque es estable y no cambia
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ...existing code...
@@ -144,6 +131,70 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
 
+  // Función para validar el formulario
+  const validateForm = React.useCallback((): boolean => {
+    const newErrors: Partial<LoginFormData> = {};
+    if (!formData.user.trim()) {
+      newErrors.user = 'Este campo es obligatorio';
+    }
+    if (formData.user.trim() && !formData.password.trim()) {
+      newErrors.password = 'Este campo es obligatorio';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  // Función para manejar el login
+  const handleLogin = React.useCallback(async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setErrorState(null);
+    try {
+      // Simular llamada a la API de login
+      console.log('[Login] Login attempt:', {
+        user: formData.user,
+        password: formData.password,
+      });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (formData.user === 'admin' && formData.password === 'admin') {
+        await keychainService.saveUserCredentials({
+          username: formData.user,
+          password: formData.password,
+        });
+        await keychainService.saveGenericCredentials({
+          username: formData.user,
+          password: formData.password,
+        });
+        if (!biometricsEnabled && canUseBiometrics) {
+          Alert.alert(
+            'Activar Biometría',
+            '¿Deseas activar la autenticación biométrica para futuros accesos?',
+            [
+              { text: 'No', style: 'cancel', onPress: () => {} },
+              { text: 'Sí', onPress: async () => {
+                await keychainService.setBiometricsEnabled(true);
+                setBiometricsEnabled(true);
+              }}
+            ]
+          );
+        }
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        } else {
+          Alert.alert('Éxito', 'Login exitoso', [
+            { text: 'OK', onPress: () => {} }
+          ]);
+        }
+      } else {
+        setErrorState({ message: ['Usuario o contraseña incorrectos'] });
+      }
+    } catch (error) {
+      setErrorState({ message: ['Error de conexión. Inténtelo de nuevo.'] });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [formData, biometricsEnabled, canUseBiometrics, onLoginSuccess, validateForm]);
+
   // Lanzar login automático solo cuando el password se rellene por Face ID
   useEffect(() => {
     if (pendingAutoLogin && formData.password) {
@@ -164,98 +215,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return `https://sede.add4u.com/public/GestDoc/loginImages/img${dia}.jpg`;
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<LoginFormData> = {};
-    
-    if (!formData.user.trim()) {
-      newErrors.user = 'Este campo es obligatorio';
-    }
-    // Solo mostrar error de password si el usuario está presente
-    if (formData.user.trim() && !formData.password.trim()) {
-      newErrors.password = 'Este campo es obligatorio';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = React.useCallback(async () => {
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    setErrorState(null);
-
-    try {
-      // Simular llamada a la API de login
-      console.log('[Login] Login attempt:', {
-        user: formData.user,
-        password: formData.password,
-      });
-
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simular respuesta exitosa
-      if (formData.user === 'admin' && formData.password === 'admin') {
-        // Guardar credenciales de usuario
-        console.log('[Login] Guardando credenciales en keychainService...');
-        await keychainService.saveUserCredentials({
-          username: formData.user,
-          password: formData.password,
-        });
-        // Guardar también en el keychain genérico para biometría
-        await keychainService.saveGenericCredentials({
-          username: formData.user,
-          password: formData.password,
-        });
-
-        // Trazas biometría
-        console.log('[Biometría] Estado tras login:', {
-          biometricsEnabled,
-          canUseBiometrics
-        });
-        // Preguntar si desea activar biometría si no está ya activada
-        if (!biometricsEnabled && canUseBiometrics) {
-          console.log('[Biometría] Mostrando alerta para activar biometría...');
-          Alert.alert(
-            'Activar Biometría',
-            '¿Deseas activar la autenticación biométrica para futuros accesos?',
-            [
-              { text: 'No', style: 'cancel', onPress: () => console.log('[Biometría] Usuario NO activa biometría') },
-              { 
-                text: 'Sí', 
-                onPress: async () => {
-                  console.log('[Biometría] Usuario activa biometría, guardando en keychainService...');
-                  await keychainService.setBiometricsEnabled(true);
-                  setBiometricsEnabled(true);
-                }
-              }
-            ]
-          );
-        }
-
-        if (onLoginSuccess) {
-          console.log('[Login] onLoginSuccess callback');
-          onLoginSuccess();
-        } else {
-          Alert.alert('Éxito', 'Login exitoso', [
-            { text: 'OK', onPress: () => console.log('[Login] Redirect to dashboard') }
-          ]);
-        }
-      } else {
-        console.log('[Login] Usuario o contraseña incorrectos');
-        setErrorState({
-          message: ['Usuario o contraseña incorrectos']
-        });
-      }
-    } catch (error) {
-      console.error('[Login] Error en login:', error);
-      setErrorState({
-        message: ['Error de conexión. Inténtelo de nuevo.']
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [formData, biometricsEnabled, canUseBiometrics, onLoginSuccess, validateForm]);
 
   const handleInputChange = (field: keyof LoginFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

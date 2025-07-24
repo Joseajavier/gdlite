@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Avatar } from './Avatar';
+import { StorageManager } from '../utils/storage';
 import { theme } from '../styles/theme';
 
 interface NavbarProps {
@@ -9,6 +11,15 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
+  const [imgUsuario, setImgUsuario] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      const config = await StorageManager.getAppConfig();
+      setImgUsuario(config?.ImgUsuario || null);
+    })();
+  }, []);
+
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
@@ -20,7 +31,11 @@ const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
             {rightContent}
             {onUserMenuToggle && (
               <TouchableOpacity onPress={onUserMenuToggle} style={styles.navbarUserAction}>
-                <MaterialIcons name="account-circle" size={28} color="#fff" />
+                {imgUsuario ? (
+                  <Avatar src={imgUsuario} size={36} variant="circular" />
+                ) : (
+                  <MaterialIcons name="account-circle" size={28} color="#fff" />
+                )}
               </TouchableOpacity>
             )}
           </View>

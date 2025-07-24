@@ -12,6 +12,7 @@ export interface AppConfigData {
   clientSecret: string;
   environment: 'development' | 'production' | 'staging';
   lastLoginDate: string;
+  ImgUsuario?: string;
 }
 
 // Constantes para las keys de almacenamiento

@@ -16,6 +16,7 @@ export interface QRConfigData {
   TokenAplicacion: string;
   IdUsuario: string;
   NombreCompleto?: string;
+  NombreUsuario?: string;
   ImgUsuario?: string;
   UrlSwagger: string;
   ColorPrimario?: string;
@@ -126,6 +127,9 @@ export function validateQRData(jsonString: string): QRValidationResult {
   if (data.NombreCompleto && typeof data.NombreCompleto !== 'string') {
     errors.push('NombreCompleto debe ser una cadena de texto');
   }
+  if (data.NombreUsuario && typeof data.NombreUsuario !== 'string') {
+    errors.push('NombreUsuario debe ser una cadena de texto');
+  }
   if (data.ImgUsuario && typeof data.ImgUsuario !== 'string') {
     errors.push('ImgUsuario debe ser una cadena de texto');
   }
@@ -145,6 +149,7 @@ export function validateQRData(jsonString: string): QRValidationResult {
     UrlSwagger: data.UrlSwagger,
   };
   if (data.NombreCompleto) validData.NombreCompleto = data.NombreCompleto;
+  if (data.NombreUsuario) validData.NombreUsuario = data.NombreUsuario;
   if (data.ImgUsuario) validData.ImgUsuario = data.ImgUsuario;
   if (data.ColorPrimario) validData.ColorPrimario = data.ColorPrimario;
 
@@ -169,7 +174,10 @@ export function qrDataToAppConfig(qrData: QRConfigData): AppConfigData {
     clientSecret: '',
     environment: 'production',
     lastLoginDate: new Date().toISOString(),
-    // Puedes agregar otros campos personalizados si AppConfigData lo permite
+    NombreUsuario: qrData.NombreUsuario || undefined,
+    NombreCompleto: qrData.NombreCompleto || undefined,
+    ImgUsuario: qrData.ImgUsuario || undefined,
+    ColorPrimario: qrData.ColorPrimario || undefined,
   };
 }
 
@@ -181,6 +189,7 @@ export function generateExampleQRData(): string {
     TokenAplicacion: '002D7ED9FB845C41B2E4A28F6A041460',
     IdUsuario: '36',
     NombreCompleto: 'Juan Pérez',
+    NombreUsuario: 'jperez',
     ImgUsuario: '1.png',
     UrlSwagger: 'https://gestdocj.add4u.com/GestDocX/GestDocX/swagger-ui/index.html',
     ColorPrimario: 'success',
@@ -204,7 +213,8 @@ export function getQRDataSummary(qrData: QRConfigData): string {
   const fields = [];
   fields.push(`Token: ${qrData.TokenAplicacion}`);
   fields.push(`Usuario: ${qrData.IdUsuario}`);
-  if (qrData.NombreCompleto) fields.push(`Nombre: ${qrData.NombreCompleto}`);
+  if (qrData.NombreCompleto) fields.push(`Nombre completo: ${qrData.NombreCompleto}`);
+  if (qrData.NombreUsuario) fields.push(`Nombre usuario: ${qrData.NombreUsuario}`);
   if (qrData.ImgUsuario) fields.push(`Imagen: ${qrData.ImgUsuario}`);
   fields.push(`URL Swagger: ${qrData.UrlSwagger}`);
   if (qrData.ColorPrimario) fields.push(`Color: ${qrData.ColorPrimario}`);

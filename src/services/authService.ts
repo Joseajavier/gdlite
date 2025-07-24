@@ -1,59 +1,56 @@
 // authService.ts
 
-import * as Keychain from 'react-native-keychain';
-import ReactNativeBiometrics from 'react-native-biometrics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppConfigData, StorageManager } from '../utils/storage';
 
-// Puedes añadir otros métodos según necesites para tu login, tokens, etc.
+const API_BASE_URL = 'https://tu-api.com'; // Cambia por tu endpoint real
 
-// Comprueba si el dispositivo soporta biometría (Face ID o Touch ID)
-export async function canUseBiometrics(): Promise<boolean> {
-  try {
-    const supported = await Keychain.getSupportedBiometryType();
-    // Devuelve true si soporta algún tipo de biometría
-    return !!supported;
-  } catch (e) {
-    console.warn('[authService] Error comprobando biometría:', e);
-    return false;
+export interface AuthResponse {
+  token: string;
+  refreshToken?: string;
+  user: {
+    id: string;
+    username: string;
+    email?: string;
+    ImgUsuario?: string;
+    [key: string]: any;
+  };
+}
+
+export class AuthService {
+  static async login(username: string, password: string): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error('Credenciales incorrectas');
+    const data = await res.json();
+    // Guarda el token y usuario en AsyncStorage
+    await AsyncStorage.setItem('auth_token', data.token);
+    await AsyncStorage.setItem('auth_user', JSON.stringify(data.user));
+    return data;
+  }
+
+  static async logout(): Promise<void> {
+    await AsyncStorage.removeItem('auth_token');
+    await AsyncStorage.removeItem('auth_user');
+    // Si tu API requiere endpoint de logout, puedes llamarlo aquí
+  }
+
+  static async getCurrentUser(): Promise<AuthResponse['user'] | null> {
+    const userStr = await AsyncStorage.getItem('auth_user');
+    return userStr ? JSON.parse(userStr) : null;
+  }
+
+  static async getToken(): Promise<string | null> {
+    return await AsyncStorage.getItem('auth_token');
+  }
+
+  static async isAuthenticated(): Promise<boolean> {
+    const token = await this.getToken();
+    return !!token;
   }
 }
 
-// Lanza el prompt de Face ID / Touch ID usando react-native-biometrics
-export async function authenticateWithBiometrics(): Promise<boolean> {
-  try {
-    const rnBiometrics = new ReactNativeBiometrics();
-    const { available } = await rnBiometrics.isSensorAvailable();
-    if (!available) {
-      console.warn('[authService] No hay sensor biométrico disponible');
-      return false;
-    }
-    const { success } = await rnBiometrics.simplePrompt({ promptMessage: 'Autenticación necesaria para acceder' });
-    if (success) {
-      console.log('[authService] Prompt biométrico mostrado y autenticación OK');
-      return true;
-    } else {
-      console.warn('[authService] Prompt biométrico cancelado o fallido');
-      return false;
-    }
-  } catch (e) {
-    console.warn('[authService] Error usando biometría:', e);
-    return false;
-  }
-}
-
-// Ejemplo genérico para login normal (puedes adaptarlo a tu backend)
-export async function login(user: string, password: string): Promise<boolean> {
-  // Aquí tu lógica real de autenticación, por ejemplo contra una API REST
-  // Por ahora es solo un placeholder
-  if (user === 'admin' && password === 'admin') {
-    // Guardar credenciales en el Keychain si quieres login automático/biométrico
-    await Keychain.setGenericPassword(user, password);
-    return true;
-  }
-  return false;
-}
-
-export const authService = {
-  canUseBiometrics,
-  authenticateWithBiometrics,
-  login,
-};
+export default AuthService;

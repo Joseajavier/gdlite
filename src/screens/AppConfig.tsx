@@ -16,6 +16,7 @@ import { TextField } from '../components/TextField';
 import { Card } from '../components/Card';
 import { theme } from '../styles/theme';
 import { StorageManager, AppConfigData } from '../utils/storage';
+import KeychainService from '../services/keychainService';
 
 interface AppConfigProps {
   onConfigComplete?: () => void;
@@ -26,6 +27,8 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Estado para mostrar el modal de configuración legible
+  const [showConfigModal, setShowConfigModal] = useState(false);
   // Estados para los 10 datos de configuración
   const [configData, setConfigData] = useState<AppConfigData>({
     serverUrl: '',
@@ -41,6 +44,17 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
   });
 
   const [errors, setErrors] = useState<Partial<AppConfigData>>({});
+
+  // Borrar toda la configuración y datos
+  const handleFullReset = async () => {
+    try {
+      await StorageManager.clearAllData();
+      await KeychainService.clearAll();
+      Alert.alert('Reseteo completo', 'Todos los datos han sido eliminados.');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo borrar toda la información.');
+    }
+  };
 
   useEffect(() => {
     loadExistingConfig();
@@ -149,7 +163,41 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background.default} />
-      
+      {/* Modal legible de configuración */}
+      {showConfigModal && (
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.content}>
+            <Typography variant="h2" style={modalStyles.title}>Configuración actual</Typography>
+            <View style={modalStyles.table}>
+              {Object.entries(configData)
+                .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+                .map(([key, value]) => (
+                  <View style={modalStyles.row} key={key}>
+                    <Typography style={modalStyles.key}>{getLabel(key)}</Typography>
+                    <Typography style={modalStyles.value}>{key === 'lastLoginDate' && value ? new Date(value as string).toLocaleString() : String(value)}</Typography>
+                  </View>
+                ))}
+            </View>
+            <Button variant="contained" color="primary" onPress={() => setShowConfigModal(false)} style={modalStyles.closeBtn}>Cerrar</Button>
+          </View>
+        </View>
+// Traduce claves a etiquetas legibles
+function getLabel(key: string): string {
+  const labels: Record<string, string> = {
+    serverUrl: 'Servidor',
+    apiKey: 'API Key',
+    organizationId: 'Organización',
+    userId: 'Usuario',
+    sessionToken: 'Token de sesión',
+    refreshToken: 'Refresh token',
+    clientId: 'Client ID',
+    clientSecret: 'Client Secret',
+    environment: 'Ambiente',
+    lastLoginDate: 'Último login',
+  };
+  return labels[key] || key;
+}
+      )}
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -169,7 +217,6 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
                 <Typography variant="body1" style={styles.subtitle}>
                   Ingresa los 10 datos necesarios para configurar la aplicación o escanea un código QR
                 </Typography>
-                
                 {/* Botón de QR */}
                 <Button
                   variant="outlined"
@@ -178,6 +225,15 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
                   style={styles.qrButton}
                 >
                   📱 Escanear QR
+                </Button>
+                {/* Botón para ver configuración legible */}
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onPress={() => setShowConfigModal(true)}
+                  style={styles.qrButton}
+                >
+                  �️ Ver configuración actual
                 </Button>
               </View>
 
@@ -323,6 +379,15 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
                     'Guardar Configuración'
                   )}
                 </Button>
+                {/* Botón para borrar toda la configuración y datos */}
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onPress={handleFullReset}
+                  style={styles.fullResetButton}
+                >
+                  Borrar toda la configuración y datos
+                </Button>
               </View>
             </Card>
           </View>
@@ -331,6 +396,62 @@ const AppConfig: React.FC<AppConfigProps> = ({ onConfigComplete, onScanQR }) => 
     </SafeAreaView>
   );
 };
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  content: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    minWidth: 300,
+    maxWidth: 400,
+    elevation: 8,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 16,
+    color: theme.colors.text.primary,
+    fontWeight: '700',
+    fontSize: 22,
+  },
+  table: {
+    marginBottom: 24,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  key: {
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+  value: {
+    color: theme.colors.text.secondary,
+    flex: 2,
+    textAlign: 'right',
+    fontFamily: 'monospace',
+  },
+  closeBtn: {
+    marginTop: 8,
+    minWidth: 120,
+    alignSelf: 'center',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -409,6 +530,9 @@ const styles = StyleSheet.create({
   qrButton: {
     marginTop: 16,
     minWidth: 200,
+  },
+  fullResetButton: {
+    marginTop: 16,
   },
 });
 

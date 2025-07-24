@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import UserMenuFull from '../../components/UserMenuFull';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -111,56 +112,14 @@ const Portafirmas: React.FC = () => {
         </TouchableOpacity>
       </View>
     }>
+      {/* User Menu Dropdown (componente reutilizable) */}
+      <UserMenuFull
+        visible={showUserMenu}
+        onClose={() => setShowUserMenu(false)}
+        onOption={option => handleMenuOption(option)}
+        styles={styles}
+      />
       <View style={styles.content}>
-
-        {/* User Menu Dropdown */}
-        {showUserMenu && (
-          <View style={styles.userMenuContainer}>
-            <View style={styles.userMenu}>
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuOption('profile')}
-              >
-                <Typography style={styles.menuIcon}>👤</Typography>
-                <Typography style={styles.menuText}>Mi Perfil</Typography>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuOption('settings')}
-              >
-                <Typography style={styles.menuIcon}>⚙️</Typography>
-                <Typography style={styles.menuText}>Configuración</Typography>
-              </TouchableOpacity>
-              
-              <View style={styles.menuDivider} />
-              
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={() => handleMenuOption('logout')}
-              >
-                <Typography style={styles.menuIcon}>🚪</Typography>
-                <Typography style={styles.menuText}>Cerrar Sesión</Typography>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Overlay for closing menu */}
-        {showUserMenu && (
-          <Modal
-            transparent={true}
-            visible={showUserMenu}
-            onRequestClose={() => setShowUserMenu(false)}
-          >
-            <TouchableOpacity 
-              style={styles.overlay}
-              activeOpacity={1}
-              onPress={() => setShowUserMenu(false)}
-            />
-          </Modal>
-        )}
-
         {/* Main Content Area */}
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           <View style={styles.contentArea}>
@@ -172,7 +131,6 @@ const Portafirmas: React.FC = () => {
             </Typography>
           </View>
         </ScrollView>
-
       </View>
     </MainLayout>
   );
@@ -268,45 +226,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
   },
-  // User Menu Dropdown styles
+  // User Menu Dropdown styles (idéntico a HomeScreen)
   userMenuContainer: {
     position: 'absolute',
-    top: 60,
+    top: 5,
     right: 16,
     zIndex: 1000,
   },
   userMenu: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: 8,
-    minWidth: 200,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 12,
+    minWidth: 220,
+    elevation: 12,
+    shadowColor: '#666CFF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+  },
+  userMenuHeader: {
+    alignItems: 'center',
+    marginBottom: 8,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 12,
     gap: 12,
   },
   menuIcon: {
-    fontSize: 16,
-    color: '#666CFF',
+    marginRight: 8,
   },
   menuText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#333333',
     fontWeight: '500',
   },
   menuDivider: {
     height: 1,
     backgroundColor: '#E0E0E0',
-    marginVertical: 4,
-    marginHorizontal: 16,
+    marginVertical: 6,
+    marginHorizontal: 18,
   },
   overlay: {
     flex: 1,

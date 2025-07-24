@@ -66,9 +66,16 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
   // Guardar los datos escaneados y lanzar el flujo normal
   const saveScannedData = async (qrData: any) => {
     try {
+      console.log('[QRScanner] Datos QR recibidos:', qrData);
       const appConfig = qrDataToAppConfig(qrData);
-      const saved = await keychainService.saveAppConfig(appConfig);
-      if (!saved) {
+      console.log('[QRScanner] appConfig transformado:', appConfig);
+      // Guardar en Keychain y en AsyncStorage para que el modal lo lea
+      const savedKeychain = await keychainService.saveAppConfig(appConfig);
+      const savedStorage = await import('../../utils/storage').then(m => m.StorageManager.saveAppConfig(appConfig));
+      // Leer de AsyncStorage para verificar que se guardó correctamente
+      const loadedConfig = await import('../../utils/storage').then(m => m.StorageManager.getAppConfig());
+      console.log('[QRScanner] appConfig guardado en AsyncStorage:', loadedConfig);
+      if (!savedKeychain) {
         Alert.alert('Error', 'No se pudo guardar la configuración');
         return;
       }
@@ -81,18 +88,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
 
   // Finaliza la configuración y llama al callback de éxito
   const completeConfiguration = (appConfig: AppConfigData) => {
-    Alert.alert(
-      'Configuración Guardada',
-      'Los datos se han guardado correctamente. Serás redirigido a la pantalla principal.',
-      [
-        {
-          text: 'Continuar',
-          onPress: () => {
-            if (onScanSuccess) onScanSuccess(appConfig);
-          }
-        }
-      ]
-    );
+    if (onScanSuccess) onScanSuccess(appConfig);
   };
 
   // Obtener la cámara trasera
@@ -171,7 +167,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
       const validationResult = validateQRData(data);
       if (!validationResult.isValid) {
         console.log('QR no válido:', validationResult.errors);  // Log de errores si el QR no es válido
-        // Permitir volver a escanear inmediatamente
         setTimeout(() => setScanned(false), 500);
         Alert.alert(
           'QR Inválido',
@@ -181,16 +176,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
         return;
       }
       const qrData = validationResult.data!;
-      const configSummary = getQRDataSummary(qrData);
-      console.log('Resumen QR:', configSummary);  // Log del resumen del QR
-      Alert.alert(
-        'QR Escaneado',
-        `Se encontraron los siguientes datos:\n\n${configSummary}\n\n¿Deseas guardar esta configuración?`,
-        [
-          { text: 'Cancelar', style: 'cancel', onPress: () => setScanned(false) },
-          { text: 'Guardar', onPress: () => saveScannedData(qrData) }
-        ]
-      );
+      // Guarda directamente sin mostrar resumen
+      saveScannedData(qrData);
     } catch (error) {
       console.error('[QRScanner] Error parsing QR data:', error);
       setTimeout(() => setScanned(false), 500);

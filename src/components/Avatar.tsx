@@ -77,7 +77,8 @@ export const Avatar: React.FC<AvatarProps> = ({
       width: avatarSize,
       height: avatarSize,
       borderRadius,
-      backgroundColor: src ? 'transparent' : getBackgroundColor(),
+      // Solo fondo si no hay imagen
+      ...(src ? {} : { backgroundColor: getBackgroundColor() }),
     },
     style,
   ];

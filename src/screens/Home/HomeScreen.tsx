@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   SafeAreaView,
-  StatusBar,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Image
+  Alert
 } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import UserMenuFull from '../../components/UserMenuFull';
 import Navbar from '../../components/Navbar';
 import DashboardCard from '../../components/DashboardCard';
-import { Typography } from '../../components/Typography';
+import ConfigModal from '../../components/ConfigModal';
 import { theme } from '../../styles/theme';
+import { StorageManager } from '../../utils/storage';
 
 
 interface HomeScreenProps {
@@ -23,19 +23,29 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetConfig: _onResetConfig }) => {
-  const handleShowConfig = async () => {
-    try {
-      const { keychainService } = await import('../../services/keychainService');
-      const config = await keychainService.getAppConfig();
-      console.log('[Config] Datos guardados:', config);
-      Alert.alert(
-        'Configuración guardada',
-        config ? JSON.stringify(config, null, 2) : 'No hay configuración guardada'
-      );
-    } catch (error) {
-      console.error('[Config] Error al obtener configuración:', error);
-      Alert.alert('Error', 'No se pudo obtener la configuración');
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configData, setConfigData] = useState<any>(null);
+
+  // Recarga la configuración cada vez que el modal se abre
+  // Recarga la configuración cada vez que el modal se abre
+  useEffect(() => {
+    if (showConfigModal) {
+      (async () => {
+        try {
+          const config = await StorageManager.getAppConfig();
+          setConfigData(config);
+        } catch (error) {
+          console.error('[Config] Error al obtener configuración:', error);
+          Alert.alert('Error', 'No se pudo obtener la configuración');
+        }
+      })();
+    } else {
+      setConfigData(null); // Limpia los datos al cerrar el modal
     }
+  }, [showConfigModal]);
+
+  const handleShowConfig = () => {
+    setShowConfigModal(true);
   };
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -89,45 +99,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   return (
     <SafeAreaView style={styles.container}>
       <Navbar onUserMenuToggle={handleUserMenuToggle} />
-      {/* User Menu Dropdown y fondo para cerrar */}
-      {showUserMenu && (
-        <>
-          <TouchableOpacity
-            style={styles.overlayAbsolute}
-            activeOpacity={1}
-            onPress={() => setShowUserMenu(false)}
-          />
-          <View style={styles.userMenuContainer}>
-            <View style={styles.userMenu}>
-              <View style={styles.userMenuHeader}>
-                <MaterialIcons name="person" size={22} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Usuario</Typography>
-              </View>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('profile')}>
-                <MaterialIcons name="person" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Mi Perfil</Typography>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('settings')}>
-                <MaterialIcons name="settings" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Configuración</Typography>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('showConfig')}>
-                <MaterialIcons name="info" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Ver configuración</Typography>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('resetConfig')}>
-                <MaterialIcons name="delete" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Borrar configuración</Typography>
-              </TouchableOpacity>
-              <View style={styles.menuDivider} />
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('logout')}>
-                <MaterialIcons name="logout" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Cerrar Sesión</Typography>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </>
-      )}
+      {/* Modal legible de configuración (reutilizable) */}
+      <ConfigModal
+        visible={showConfigModal}
+        configData={configData}
+        onClose={() => setShowConfigModal(false)}
+      />
+      {/* User Menu Dropdown y fondo para cerrar (componente reutilizable) */}
+      <UserMenuFull
+        visible={showUserMenu}
+        onClose={() => setShowUserMenu(false)}
+        onOption={handleMenuOption}
+        styles={styles}
+      />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.cardsContainer}>
           <TouchableOpacity style={styles.cardTouchable} onPress={handlePortadirmas} activeOpacity={0.9}>
@@ -171,6 +155,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
