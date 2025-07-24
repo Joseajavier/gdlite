@@ -67,19 +67,18 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
   const saveScannedData = async (qrData: any) => {
     try {
       console.log('[QRScanner] Datos QR recibidos:', qrData);
-      const appConfig = qrDataToAppConfig(qrData);
-      console.log('[QRScanner] appConfig transformado:', appConfig);
-      // Guardar en Keychain y en AsyncStorage para que el modal lo lea
-      const savedKeychain = await keychainService.saveAppConfig(appConfig);
-      const savedStorage = await import('../../utils/storage').then(m => m.StorageManager.saveAppConfig(appConfig));
-      // Leer de AsyncStorage para verificar que se guardó correctamente
-      const loadedConfig = await import('../../utils/storage').then(m => m.StorageManager.getAppConfig());
-      console.log('[QRScanner] appConfig guardado en AsyncStorage:', loadedConfig);
+      // Guardar el objeto QR original, no el transformado
+      const savedKeychain = await keychainService.saveAppConfig(qrData);
+      await import('../../utils/storage').then(m => m.StorageManager.saveAppConfig(qrData));
+      // Limpiar credenciales de usuario para evitar password relleno tras escanear QR
+      await keychainService.clearUserCredentials();
+      // Forzar recarga de configuración tras guardar
+      setHasConfig(false); // Para que el useEffect de Login vuelva a leer
       if (!savedKeychain) {
         Alert.alert('Error', 'No se pudo guardar la configuración');
         return;
       }
-      completeConfiguration(appConfig);
+      completeConfiguration(qrData);
     } catch (error) {
       console.error('[QRScanner] Error saving scanned data:', error);
       Alert.alert('Error', 'No se pudo guardar la configuración');
@@ -279,11 +278,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
               onPress={() => handleQRCodeScanned({
                 data: JSON.stringify({
                   TokenAplicacion: '002D7ED9FB845C41B2E4A28F6A041460',
-                  IdUsuario: '36',
-                  NombreCompleto: 'Juan Pérez',
-                  ImgUsuario: '1.png',
-                  UrlSwagger: 'https://gestdocj.add4u.com/GestDocX/GestDocX/swagger-ui/index.html',
-                  ColorPrimario: 'success',
+                  IdUsuario: '1',
+                  NombreCompleto: 'ADD4U ',
+                  NombreUsuario: 'add4u',
+                  ImgUsuario: 'https://add4ux.s3.amazonaws.com/public/imagenes/DC46F4C8B087C14FA18D796748A0F210.com/public/images/4EE393F36705E04FBE7248D8B2055803jpeg',
+                  UrlSwagger: 'http://localhost:8080/GestDocX/',
+                  ColorPrimario: 'primary',
                 })
               })}
               style={styles.testIconButton}

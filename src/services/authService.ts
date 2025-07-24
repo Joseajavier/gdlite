@@ -1,9 +1,9 @@
 // authService.ts
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppConfigData, StorageManager } from '../utils/storage';
 
-const API_BASE_URL = 'https://tu-api.com'; // Cambia por tu endpoint real
+
+import * as Keychain from 'react-native-keychain';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AuthResponse {
   token: string;
@@ -17,40 +17,61 @@ export interface AuthResponse {
   };
 }
 
-export class AuthService {
-  static async login(username: string, password: string): Promise<AuthResponse> {
-    const res = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    if (!res.ok) throw new Error('Credenciales incorrectas');
-    const data = await res.json();
-    // Guarda el token y usuario en AsyncStorage
-    await AsyncStorage.setItem('auth_token', data.token);
-    await AsyncStorage.setItem('auth_user', JSON.stringify(data.user));
-    return data;
-  }
+export const authService = {
+  async login(username: string, password: string): Promise<AuthResponse> {
+    // Simulación de login, reemplaza con tu lógica real
+    if (username === 'admin' && password === 'admin') {
+      const user = { id: '1', username: 'admin', email: 'admin@demo.com' };
+      const token = 'demo-token';
+      await AsyncStorage.setItem('auth_token', token);
+      await AsyncStorage.setItem('auth_user', JSON.stringify(user));
+      return { token, user };
+    } else {
+      throw new Error('Credenciales incorrectas');
+    }
+  },
 
-  static async logout(): Promise<void> {
+  async logout(): Promise<void> {
     await AsyncStorage.removeItem('auth_token');
     await AsyncStorage.removeItem('auth_user');
-    // Si tu API requiere endpoint de logout, puedes llamarlo aquí
-  }
+  },
 
-  static async getCurrentUser(): Promise<AuthResponse['user'] | null> {
+  async getCurrentUser(): Promise<AuthResponse['user'] | null> {
     const userStr = await AsyncStorage.getItem('auth_user');
     return userStr ? JSON.parse(userStr) : null;
-  }
+  },
 
-  static async getToken(): Promise<string | null> {
+  async getToken(): Promise<string | null> {
     return await AsyncStorage.getItem('auth_token');
-  }
+  },
 
-  static async isAuthenticated(): Promise<boolean> {
+  async isAuthenticated(): Promise<boolean> {
     const token = await this.getToken();
     return !!token;
-  }
-}
+  },
 
-export default AuthService;
+  async canUseBiometrics(): Promise<boolean> {
+    try {
+      const biometryType = await Keychain.getSupportedBiometryType();
+      return !!biometryType;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async authenticateWithBiometrics(): Promise<boolean> {
+    try {
+      const result = await Keychain.getGenericPassword({
+        authenticationPrompt: {
+          title: 'Autenticación biométrica',
+          subtitle: 'Inicia sesión con Face ID/Touch ID',
+          description: 'Usa tu biometría para acceder',
+          cancel: 'Cancelar',
+        },
+      });
+      return !!(result && result.username && result.password);
+    } catch (e) {
+      return false;
+    }
+  },
+};

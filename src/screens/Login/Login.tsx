@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import {
   View,
   StyleSheet,
@@ -38,31 +39,53 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   // Estado para mostrar el usuario extraído del QR y rellenar el campo usuario
   const [lastUser, setLastUser] = useState<string | null>(null);
+  // Estado para la URL del avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  const isFocused = useIsFocused();
   useEffect(() => {
     (async () => {
       try {
-        // Leer config guardada por QR
+        // Leer config guardada por QR (usando solo los campos originales del QR)
         const config = await keychainService.getAppConfig();
-        if (config && (config.userId || config.NombreUsuario)) {
-          // Preferir NombreUsuario si existe, si no userId
-          const usuario = config.NombreUsuario ? config.NombreUsuario : config.userId;
+        if (config) {
+          console.log('[Login] Config leída:', config);
+        } else {
+          console.log('[Login] Config leída: null o no encontrada');
+        }
+        let usuario = '';
+        // Usar solo los campos originales del QR
+        if (config && typeof config.NombreUsuario === 'string' && config.NombreUsuario) {
+          usuario = config.NombreUsuario;
+        } else if (config && typeof config.IdUsuario === 'string' && config.IdUsuario) {
+          usuario = config.IdUsuario;
+        }
+        // Avatar: usar ImgUsuario si existe y es string
+        if (config && typeof config.ImgUsuario === 'string' && config.ImgUsuario) {
+          setAvatarUrl(config.ImgUsuario);
+        } else {
+          setAvatarUrl(null);
+        }
+        if (usuario) {
           setLastUser(usuario);
           setFormData({ user: usuario, password: '' });
         } else {
+          setLastUser(null);
           setFormData({ user: '', password: '' });
         }
       } catch (e) {
         setLastUser(null);
         setFormData({ user: '', password: '' });
+        setAvatarUrl(null);
       }
     })();
-  }, []);
+  }, [isFocused]);
 
   // Activar Face ID automáticamente al abrir la app si está disponible y habilitada
   // Estado para saber si Face ID fue exitoso y disparar login automático
   const [pendingAutoLogin, setPendingAutoLogin] = useState(false);
 
+// Usar métodos estáticos de AuthService para biometría (ajustar si es necesario)
   useEffect(() => {
     const tryBiometricLogin = async () => {
       try {
@@ -246,13 +269,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         {/* Contenido principal */}
         <View style={styles.content}>
           <Card style={styles.loginCard}>
-            {/* Logo y título */}
+            {/* Logo, título y avatar */}
             <View style={styles.headerSection}>
               <View style={styles.logoContainer}>
                 <Typography variant="h1" style={styles.logoText}>
                   GdLite
                 </Typography>
               </View>
+              {/* Avatar centrado debajo del logo si hay avatarUrl */}
+              {avatarUrl && (
+                <View style={styles.avatarContainer}>
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
             </View>
             {/* Formulario de login */}
             <View style={styles.loginSection}>
@@ -318,6 +351,20 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 };
 
 const styles = StyleSheet.create({
+  avatarContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: theme.colors.primary.main,
+    backgroundColor: '#eee',
+  },
   container: {
     flex: 1,
     backgroundColor: '#2c3e50', // Color base más oscuro para contrastar con la imagen

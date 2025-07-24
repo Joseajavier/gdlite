@@ -21,10 +21,14 @@ export interface AppConfigData {
   environment?: 'production' | 'staging' | 'development';
   expiresAt?: string; // ISO string
   lastLoginDate?: string;
+  // Campos originales del QR
+  TokenAplicacion?: string;
+  IdUsuario?: string;
   NombreUsuario?: string;
   NombreCompleto?: string;
   ImgUsuario?: string;
   ColorPrimario?: string;
+  UrlSwagger?: string;
 }
 
 // Interfaz para credenciales de usuario
@@ -34,6 +38,18 @@ export interface UserCredentials {
 }
 
 class KeychainService {
+  /**
+   * Limpia solo las credenciales de usuario
+   */
+  async clearUserCredentials(): Promise<boolean> {
+    try {
+      await Keychain.resetInternetCredentials({ server: KEYCHAIN_KEYS.USER_CREDENTIALS });
+      return true;
+    } catch (error) {
+      console.error('Error clearing user credentials from keychain:', error);
+      return false;
+    }
+  }
   /**
    * Guarda credenciales de usuario en el Keychain genérico (para biometría)
    */
@@ -53,11 +69,13 @@ class KeychainService {
     }
   }
   /**
-   * Guarda la configuración de la app en el keychain
+   * Guarda la configuración de la app en el keychain (guarda el objeto original del QR)
    */
-  async saveAppConfig(config: AppConfigData): Promise<boolean> {
+  async saveAppConfig(config: any): Promise<boolean> {
     try {
-      const configString = JSON.stringify(config);
+      // Si el objeto tiene un campo __originalQR, guardar ese, si no, guardar el objeto tal cual
+      const original = config && config.__originalQR ? config.__originalQR : config;
+      const configString = JSON.stringify(original);
       await Keychain.setInternetCredentials(
         KEYCHAIN_KEYS.APP_CONFIG,
         'app_config',
@@ -105,17 +123,15 @@ class KeychainService {
   }
 
   /**
-   * Valida que la configuración tenga los campos mínimos requeridos
+   * Valida que la configuración tenga los campos mínimos requeridos y que provenga de un QR válido.
+   * Solo son obligatorios: TokenAplicacion, NombreUsuario y UrlSwagger.
    */
   validateAppConfig(config: any): config is AppConfigData {
     return (
       config &&
-      typeof config.apiBaseUrl === 'string' &&
-      typeof config.userId === 'string' &&
-      typeof config.token === 'string' &&
-      config.apiBaseUrl.trim() !== '' &&
-      config.userId.trim() !== '' &&
-      config.token.trim() !== ''
+      typeof config.TokenAplicacion === 'string' && config.TokenAplicacion.trim() !== '' &&
+      typeof config.NombreUsuario === 'string' && config.NombreUsuario.trim() !== '' &&
+      typeof config.UrlSwagger === 'string' && config.UrlSwagger.trim() !== ''
     );
   }
 
