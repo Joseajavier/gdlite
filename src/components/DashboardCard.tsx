@@ -11,6 +11,8 @@ interface DashboardCardProps {
   onPress?: () => void;
   infoIcon?: string;
   infoText?: string;
+  left?: React.ReactNode;
+  footer?: React.ReactNode;
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -20,23 +22,44 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   gifSource,
   infoIcon,
   infoText,
+  left,
+  footer,
 }) => {
   return (
     <View style={styles.modernCard}>
-      <View style={gifSource ? styles.gifSection : styles.cardIconSection}>
-        {gifSource ? (
-          <Image source={gifSource} style={{ width: 90, height: 90 }} resizeMode="contain" />
-        ) : icon ? (
-          <MaterialIcons name={icon} size={32} color="#444" />
-        ) : null}
-      </View>
+      {footer && <View style={styles.cardFooterAbsolute}>{footer}</View>}
+      {left ? (
+        <View style={styles.cardIconSection}>{left}</View>
+      ) : (
+        <View style={gifSource ? styles.gifSection : styles.cardIconSection}>
+          {gifSource ? (
+            <Image source={gifSource} style={styles.gifImage} resizeMode="contain" />
+          ) : (typeof icon === 'string' ? (
+            <MaterialIcons name={icon} size={32} color="#444" />
+          ) : null)}
+        </View>
+      )}
       <View style={styles.cardContentSection}>
-        <Typography variant="h4" style={styles.cardTitle}>{title}</Typography>
+        <Typography
+          variant="h4"
+          style={styles.cardTitle}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title}
+        </Typography>
         <View style={styles.cardInfoRow}>
           {infoIcon && <MaterialIcons name={infoIcon} size={18} color="#444" style={styles.cardInfoIcon} />}
           <Typography variant="body2" style={styles.cardInfoText}>{infoText}</Typography>
         </View>
-        <Typography variant="body2" style={styles.cardSubtitle}>{subtitle}</Typography>
+        <Typography
+          variant="body2"
+          style={styles.cardSubtitle}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {subtitle}
+        </Typography>
       </View>
     </View>
   );
@@ -46,17 +69,20 @@ const styles = StyleSheet.create({
   modernCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
     minHeight: 130,
     padding: 14,
     borderRadius: 24,
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
-    elevation: 10,
-    marginVertical: 8,
-    marginHorizontal: 8,
+    borderWidth: 2,
+    borderColor: '#666CFF',
+    shadowColor: '#666CFF',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 16,
+    marginVertical: 12,
+    marginHorizontal: 0,
     overflow: 'hidden',
   },
   cardIconSection: {
@@ -100,11 +126,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 18,
     letterSpacing: 1.2,
+    maxWidth: 220,
   },
   cardSubtitle: {
     color: '#444',
     fontSize: 12,
     marginTop: 2,
+    maxWidth: 220,
+  },
+  gifImage: {
+    width: 90,
+    height: 90,
+  },
+  cardFooterAbsolute: {
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    zIndex: 2,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 8,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
 

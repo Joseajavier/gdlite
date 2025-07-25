@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { usePendingSignatures } from '../../context/PendingSignaturesContext';
+import { useSession } from '../../context/SessionContext';
+import { StorageManager } from '../../utils/storage';
 import {
   View,
   StyleSheet,
@@ -13,7 +16,7 @@ import Navbar from '../../components/Navbar';
 import DashboardCard from '../../components/DashboardCard';
 import ConfigModal from '../../components/ConfigModal';
 import { theme } from '../../styles/theme';
-import { StorageManager } from '../../utils/storage';
+
 
 
 interface HomeScreenProps {
@@ -23,6 +26,64 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetConfig: _onResetConfig }) => {
+  const { token } = useSession();
+  // Estado para el número de firmas pendientes
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const { pendingSignatures, setPendingSignatures } = usePendingSignatures();
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  // Llama al backend para obtener el número de firmas pendientes usando POST
+  useEffect(() => {
+    const fetchPendingSignatures = async () => {
+      setLoadingPending(true);
+      try {
+        if (!token) return;
+        const config = await StorageManager.getAppConfig();
+        if (!config || !(config as any).UrlSwagger) throw new Error('No se encontró la URL base en la configuración');
+        // Asegura que la URL termina en / y concatena el endpoint correcto
+        let baseUrl = (config as any).UrlSwagger;
+        if (!baseUrl.endsWith('/')) baseUrl += '/';
+        const url = `${baseUrl}avisos/getAvisos`;
+        const body = {
+          token,
+          reader: "0",
+          deleted: "0",
+          document: "1"
+        };
+        console.log('[HomeScreen][TRACE] URL de firmas pendientes (POST):', url);
+        console.log('[HomeScreen][TRACE] Body de firmas pendientes:', body);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        console.log('[HomeScreen][TRACE] Status:', response.status);
+        let data;
+        try {
+          data = await response.json();
+        } catch (e) {
+          console.log('[HomeScreen][TRACE] Error parseando JSON de firmas pendientes:', e);
+          data = null;
+        }
+        console.log('[HomeScreen][TRACE] Respuesta firmas pendientes:', data);
+        // El backend devuelve un objeto AvisosTable, normalmente con un array de avisos en una propiedad
+        if (!response.ok) throw new Error('Error al obtener firmas pendientes');
+        if (data && Array.isArray(data.avisos)) {
+          setPendingCount(data.avisos.length);
+          setPendingSignatures(data.avisos);
+        } else {
+          setPendingCount(0);
+          setPendingSignatures([]);
+        }
+      } catch (err) {
+        setPendingCount(null);
+        console.error('Error fetching pending signatures:', err);
+      } finally {
+        setLoadingPending(false);
+      }
+    };
+    fetchPendingSignatures();
+  }, [token]);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [configData, setConfigData] = useState<any>(null);
 
@@ -55,7 +116,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   };
   
   const handlePortadirmas = () => {
-    onNavigate?.('portafirmas');
+    // Al navegar a portafirmas, pasa los datos de firmas pendientes si están disponibles
+    onNavigate?.('portafirmas', pendingSignatures);
   };
 
   const handleAvisos = () => {
@@ -120,7 +182,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
               subtitle="Accede a tus documentos para firmar"
               gifSource={require('../../assets/images/firma-unscreen.gif')}
               infoIcon="pending-actions"
-              infoText="Firmas pendientes: 5"
+              infoText={
+                loadingPending
+                  ? 'Firmas pendientes: ...'
+                  : pendingCount === null
+                    ? 'Firmas pendientes: ?'
+                    : `Firmas pendientes: ${pendingCount}`
+              }
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.cardTouchable} onPress={handleAvisos} activeOpacity={0.9}>

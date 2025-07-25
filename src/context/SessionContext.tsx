@@ -14,6 +14,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(null);
 
   const setSession = (newToken: string, newUser: any) => {
+    console.log('[SessionContext][TRACE] setSession: token=', newToken, 'user=', newUser);
     setToken(newToken);
     setUser(newUser);
   };

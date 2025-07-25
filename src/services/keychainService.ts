@@ -11,9 +11,9 @@ const BIOMETRICS_KEY = 'biometricsEnabled';
 
 // Interfaz para los datos de configuración de la app
 export interface AppConfigData {
-  apiBaseUrl: string;
-  userId: string;
-  token: string;
+  apiBaseUrl?: string;
+  userId?: string;
+  token?: string;
   refreshToken?: string;
   organizationId?: string;
   clientId?: string;
@@ -97,6 +97,7 @@ class KeychainService {
       // Si el objeto tiene un campo __originalQR, guardar ese, si no, guardar el objeto tal cual
       const original = config && config.__originalQR ? config.__originalQR : config;
       const configString = JSON.stringify(original);
+      console.log('[KeychainService][TRACE] Guardando config en keychain:', original);
       await Keychain.setInternetCredentials(
         KEYCHAIN_KEYS.APP_CONFIG,
         'app_config',
@@ -120,8 +121,10 @@ class KeychainService {
       const credentials = await Keychain.getInternetCredentials(KEYCHAIN_KEYS.APP_CONFIG);
       if (credentials && credentials.password) {
         const config = JSON.parse(credentials.password) as AppConfigData;
+        console.log('[KeychainService][TRACE] Leyendo config del keychain:', config);
         return config;
       }
+      console.log('[KeychainService][TRACE] No se encontró config en keychain.');
       return null;
     } catch (error) {
       console.error('Error reading app config from keychain:', error);

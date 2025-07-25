@@ -206,13 +206,27 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         body: JSON.stringify(loginPayload)
       });
       let dataToken;
+      let token;
       try {
         dataToken = await res.json();
+        console.log('[Login][TRACE] Respuesta login:', res.status, dataToken);
+        if (dataToken && typeof dataToken.accesToken !== 'undefined') {
+          token = dataToken.accesToken;
+        } else if (dataToken && typeof dataToken.token !== 'undefined') {
+          token = dataToken.token;
+        } else if (dataToken && dataToken.Result && typeof dataToken.Result.token !== 'undefined') {
+          token = dataToken.Result.token;
+        }
+        if (!token) {
+          console.warn('[Login][TRACE] El backend NO devolvió un campo "accesToken" ni "token" ni en Result. dataToken=', dataToken);
+        } else {
+          console.log('[Login][TRACE] Token recibido:', token);
+        }
       } catch (e) {
         console.log('[Login][TRACE] Error parseando JSON de login:', e);
         dataToken = null;
+        token = undefined;
       }
-      console.log('[Login][TRACE] Respuesta login:', res.status, dataToken);
       // Nuevo backend: datosUser y no Result
       if (res.status === 401 || !dataToken || !dataToken.datosUser) {
         setErrorState({ message: ['Usuario o contraseña incorrectos'] });
@@ -234,7 +248,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         password: formData.password,
       });
       // Guardar token y datos de usuario en contexto global temporal
-      setSession('OK', dataToken.datosUser);
+      setSession(token, dataToken ? dataToken.datosUser : undefined);
       if (!biometricsEnabled && canUseBiometrics) {
         Alert.alert(
           'Activar Biometría',

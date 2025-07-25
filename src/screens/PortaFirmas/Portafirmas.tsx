@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { FlatList, Text } from 'react-native';
+import DashboardCard from '../../components/DashboardCard';
+import { Avatar } from '../../components/Avatar';
+import { usePendingSignatures } from '../../context/PendingSignaturesContext';
+import { View, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import UserMenuFull from '../../components/UserMenuFull';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Typography } from '../../components/Typography';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../../styles/theme';
 import MainLayout from '../../components/MainLayout';
 
@@ -72,8 +77,62 @@ const Portafirmas: React.FC = () => {
     }
   };
 
+  const { pendingSignatures } = usePendingSignatures();
+
+  const renderFirmas = () => {
+    if (!pendingSignatures || pendingSignatures.length === 0) {
+      return (
+        <Text style={styles.noFirmasText}>
+          No tienes firmas pendientes.
+        </Text>
+      );
+    }
+    return (
+      <FlatList
+        data={pendingSignatures}
+        keyExtractor={(item, idx) => item.Id?.toString() || item.id?.toString() || idx.toString()}
+        renderItem={({ item }) => {
+          console.log('Portafirmas item:', item);
+          return (
+            <View style={styles.firmaRow}>
+              <DashboardCard
+                title={item.nombreUsuario || 'Sin usuario'}
+                subtitle={item.comentario || 'Sin comentario'}
+                infoIcon="calendar-today"
+                infoText={item.Fecha || item.fecha || 'Sin fecha'}
+                left={
+                  <Avatar
+                    src={item.ImgUsuario}
+                    size={54}
+                    style={styles.avatarMargin}
+                  />
+                }
+                footer={
+                  <View style={styles.cardIconCenterRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (item.idDocumento) {
+                          navigation.navigate('DocumentoPDF', { idDocumento: item.idDocumento });
+                        } else {
+                          Alert.alert('Sin documento', 'No se encontró el idDocumento para este registro.');
+                        }
+                      }}
+                    >
+                      <MaterialIcons name="touch-app" size={44} color="#666CFF" style={styles.touchIconLarge} />
+                    </TouchableOpacity>
+                  </View>
+                }
+              />
+            </View>
+          );
+        }}
+        contentContainerStyle={styles.firmasListContent}
+      />
+    );
+  };
+
   return (
-    <MainLayout onUserMenuToggle={handleUserMenuToggle} bottomNav={
+    <MainLayout title="Portafirmas" onUserMenuToggle={handleUserMenuToggle} bottomNav={
       <View style={styles.bottomNavigation}>
         <TouchableOpacity 
           style={styles.navItem}
@@ -121,22 +180,76 @@ const Portafirmas: React.FC = () => {
       />
       <View style={styles.content}>
         {/* Main Content Area */}
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.contentArea}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              Gestión de Portafirmas
-            </Typography>
-            <Typography variant="body1" style={styles.sectionSubtitle}>
-              Aquí irán las cards y contenido del portafirmas
-            </Typography>
-          </View>
-        </ScrollView>
+        <View style={styles.contentArea}>
+          {renderFirmas()}
+        </View>
       </View>
     </MainLayout>
   );
 };
 
 const styles = StyleSheet.create({
+  cardIconCenterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 8,
+  },
+  pdfButtonLarge: {
+    backgroundColor: '#F3F3FF',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  touchIconLarge: {
+    marginLeft: 0,
+  },
+  pdfButtonRowSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 2,
+  },
+  pdfButtonSmall: {
+    backgroundColor: '#F3F3FF',
+    borderRadius: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    marginRight: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  touchIconSmall: {
+    marginLeft: 0,
+  },
+  pdfButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  noFirmasText: {
+    textAlign: 'center',
+    marginTop: 24,
+    color: theme.colors.text.secondary,
+  },
+  firmaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 8,
+    marginVertical: 6,
+  },
+  avatarMargin: {
+    marginRight: 14,
+  },
+  firmasListContent: {
+    paddingBottom: 32,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.default,
@@ -153,9 +266,10 @@ const styles = StyleSheet.create({
   },
   contentArea: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 32,
+    // Elimina el centrado vertical y horizontal para que FlatList ocupe todo el ancho
+    // justifyContent: 'center',
+    // alignItems: 'center',
+    // paddingVertical: 32,
   },
   sectionTitle: {
     color: theme.colors.text.primary,
@@ -222,56 +336,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 4,
   },
-  navIcon: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  pdfButton: {
+    marginLeft: 12,
+    backgroundColor: '#666CFF',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    alignSelf: 'center',
   },
-  // User Menu Dropdown styles (idéntico a HomeScreen)
-  userMenuContainer: {
-    position: 'absolute',
-    top: 5,
-    right: 16,
-    zIndex: 1000,
-  },
-  userMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingVertical: 12,
-    minWidth: 220,
-    elevation: 12,
-    shadowColor: '#666CFF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-  },
-  userMenuHeader: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  menuItem: {
+  pdfButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    gap: 12,
+    marginLeft: 12,
   },
-  menuIcon: {
-    marginRight: 8,
+  touchIconCardContainer: {
+    alignItems: 'center',
+    marginLeft: 12,
   },
-  menuText: {
-    fontSize: 15,
-    color: '#333333',
+  touchTextCard: {
+    color: '#666CFF',
+    fontSize: 10,
     fontWeight: '500',
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 6,
-    marginHorizontal: 18,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
+    marginTop: -2,
   },
   // Bottom Navigation styles
   bottomNavigation: {

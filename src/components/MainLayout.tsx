@@ -6,12 +6,13 @@ interface MainLayoutProps {
   children: React.ReactNode;
   onUserMenuToggle?: () => void;
   bottomNav?: React.ReactNode;
-}
+  title?: string;
+};
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children, onUserMenuToggle, bottomNav }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({ children, onUserMenuToggle, bottomNav, title }) => {
   return (
     <SafeAreaView style={styles.container}>
-      <Navbar onUserMenuToggle={onUserMenuToggle} />
+      <Navbar onUserMenuToggle={onUserMenuToggle} title={title} />
       <View style={styles.content}>{children}</View>
       {bottomNav && <View style={styles.bottomNav}>{bottomNav}</View>}
     </SafeAreaView>

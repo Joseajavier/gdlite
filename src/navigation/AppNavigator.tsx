@@ -6,6 +6,7 @@ import LoginContainer from '../screens/Login/LoginContainer';
 import HomeScreenContainer from '../screens/Home/HomeScreenContainer';
 import QRScannerContainer from '../screens/QRscanner/QRScannerContainer';
 import Portafirmas from '../screens/PortaFirmas/Portafirmas';
+import DocumentoPDFScreen from '../screens/PortaFirmas/DocumentoPDFScreen';
 import Avisos from '../screens/Avisos/Avisos';
 import Calendario from '../screens/Calendar/Calendario';
 
@@ -17,6 +18,7 @@ export type RootStackParamList = {
   Portafirmas: undefined;
   Avisos: undefined;
   Calendario: undefined;
+  DocumentoPDF: { idDocumento: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,6 +33,7 @@ const AppNavigator: React.FC = () => (
     <Stack.Screen name="Portafirmas" component={Portafirmas} />
     <Stack.Screen name="Avisos" component={Avisos} />
     <Stack.Screen name="Calendario" component={Calendario} />
+    <Stack.Screen name="DocumentoPDF" component={DocumentoPDFScreen} />
   </Stack.Navigator>
 </NavigationContainer>
 

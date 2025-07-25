@@ -2,15 +2,17 @@ import React from 'react';
 import { View, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Avatar } from './Avatar';
+import { Typography } from './Typography';
 import { StorageManager } from '../utils/storage';
 import { theme } from '../styles/theme';
 
 interface NavbarProps {
   onUserMenuToggle?: () => void;
   rightContent?: React.ReactNode;
+  title?: string;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
+const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent, title }) => {
   const [imgUsuario, setImgUsuario] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -25,8 +27,14 @@ const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
       <View style={styles.gradientNavbar}>
         <View style={styles.navbarContent}>
-          {/* Puedes agregar aquí un logo o título si lo necesitas */}
-          <View style={{ flex: 1 }} />
+          {/* Título a la izquierda y tamaño ajustado */}
+          <View style={styles.navbarTitleContainerLeft}>
+            {title && (
+              <Typography style={styles.navbarTitleLeft} numberOfLines={1} ellipsizeMode="tail">
+                {title}
+              </Typography>
+            )}
+          </View>
           <View style={styles.navbarRightSection}>
             {rightContent}
             {onUserMenuToggle && (
@@ -46,6 +54,19 @@ const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
 };
 
 const styles = StyleSheet.create({
+  navbarTitleContainerLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  navbarTitleLeft: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 20,
+    letterSpacing: 1,
+    textAlign: 'left',
+    maxWidth: '90%',
+  },
   gradientNavbar: {
     backgroundColor: 'linear-gradient(90deg, #666CFF 0%, #5F5FFF 100%)',
     paddingBottom: 2,
@@ -55,7 +76,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 18,
     backgroundColor: '#666CFF',
     marginBottom: 12,
     elevation: 3,
@@ -63,7 +84,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    minHeight: 64,
   },
+  // navbarTitleContainer y navbarTitle ya están definidos arriba con el nuevo tamaño y centrado
   navbarRightSection: {
     flexDirection: 'row',
     alignItems: 'center',
