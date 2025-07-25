@@ -1,85 +1,9 @@
+
+
 import React from 'react';
 import { View, Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { Typography } from '../components/Typography';
 import { theme } from '../styles/theme';
-
-interface ConfigModalProps {
-  visible: boolean;
-  configData: Record<string, any> | null;
-  onClose: () => void;
-}
-
-export const getLabel = (key: string): string => {
-  const labels: Record<string, string> = {
-    serverUrl: 'Servidor',
-    apiKey: 'API Key',
-    organizationId: 'Organización',
-    userId: 'Usuario',
-    sessionToken: 'Token de sesión',
-    refreshToken: 'Refresh token',
-    clientId: 'Client ID',
-    clientSecret: 'Client Secret',
-    environment: 'Ambiente',
-    lastLoginDate: 'Último login',
-  };
-  return labels[key] || key;
-};
-
-const ConfigModal: React.FC<ConfigModalProps> = ({ visible, configData, onClose }) => {
-  React.useEffect(() => {
-    console.log('ConfigModal configData:', configData);
-  }, [configData]);
-  // Solo mostrar los campos que vienen en el QR original
-  const allowedKeys = [
-    'TokenAplicacion',
-    'IdUsuario',
-    'NombreCompleto',
-    'NombreUsuario',
-    'ImgUsuario',
-    'UrlSwagger',
-    'ColorPrimario',
-  ];
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.content}>
-          <Typography variant="h2" style={styles.title}>Configuración actual</Typography>
-          <View style={styles.table}>
-            {configData && Object.keys(configData).length > 0 ? (
-              Object.entries(configData)
-                .filter(([key]) => allowedKeys.includes(key))
-                .map(([key, value]) => (
-                  <View style={styles.row} key={key}>
-                    <Typography style={styles.key}>{key}</Typography>
-                    <Typography style={styles.value}>
-                      {value !== undefined && value !== null && value !== '' ? String(value) : '-'}
-                    </Typography>
-                  </View>
-                ))
-            ) : (
-              <Typography style={styles.noDataText}>
-                {configData === null
-                  ? 'No hay datos de configuración guardados (configData es null).'
-                  : typeof configData !== 'object'
-                    ? 'Error: configData no es un objeto.'
-                    : 'No hay datos de configuración guardados.'}
-              </Typography>
-            )}
-          </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <Typography style={styles.closeBtnText}>Cerrar</Typography>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-};
 
 const styles = StyleSheet.create({
   overlay: {
@@ -150,5 +74,78 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 });
+
+
+interface ConfigModalProps {
+  visible: boolean;
+  configData: Record<string, any> | null;
+  onClose: () => void;
+}
+
+export const getLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    serverUrl: 'Servidor',
+    apiKey: 'API Key',
+    organizationId: 'Organización',
+    userId: 'Usuario',
+    sessionToken: 'Token de sesión',
+    refreshToken: 'Refresh token',
+    clientId: 'Client ID',
+    clientSecret: 'Client Secret',
+    environment: 'Ambiente',
+    lastLoginDate: 'Último login',
+  };
+  return labels[key] || key;
+};
+
+const ConfigModal: React.FC<ConfigModalProps> = ({ visible, configData, onClose }) => {
+  React.useEffect(() => {
+    console.log('ConfigModal configData:', configData);
+  }, [configData]);
+
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.content}>
+          <Typography variant="h2" style={styles.title}>Configuración actual</Typography>
+          <View style={styles.table}>
+            {configData && typeof configData === 'object' && Object.keys(configData).length > 0 ? (
+              Object.entries(configData).map(([key, value]) => (
+                <View style={styles.row} key={key}>
+                  <Typography style={styles.key}>{key}</Typography>
+                  <Typography style={styles.value}>
+                    {typeof value === 'object' && value !== null
+                      ? JSON.stringify(value, null, 2)
+                      : value !== undefined && value !== null && value !== ''
+                        ? String(value)
+                        : '-'}
+                  </Typography>
+                </View>
+              ))
+            ) : (
+              <Typography style={styles.noDataText}>
+                {configData === null
+                  ? 'No hay datos de configuración guardados (configData es null).'
+                  : typeof configData !== 'object'
+                    ? 'Error: configData no es un objeto.'
+                    : 'No hay datos de configuración guardados.'}
+              </Typography>
+            )}
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Typography style={styles.closeBtnText}>Cerrar</Typography>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
+  );
+}
 
 export default ConfigModal;

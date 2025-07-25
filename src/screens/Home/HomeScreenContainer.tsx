@@ -14,7 +14,8 @@ const HomeScreenContainer: React.FC = () => {
     // Limpiar credenciales pero mantener configuración
     // Solo limpiamos las credenciales de usuario si las hay
     try {
-      // Aquí podríamos implementar lógica adicional de logout
+      // Set a flag to prevent auto Face ID login after logout
+      await keychainService.setJustLoggedOut(true);
       navigation.reset({
         index: 0,
         routes: [{ name: 'Login' }],

@@ -39,6 +39,26 @@ export interface UserCredentials {
 
 class KeychainService {
   /**
+   * Flag to prevent auto Face ID login after logout
+   */
+  async setJustLoggedOut(value: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem('justLoggedOut', value ? 'true' : 'false');
+    } catch (e) {
+      console.error('Error setting justLoggedOut flag:', e);
+    }
+  }
+
+  async getJustLoggedOut(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem('justLoggedOut');
+      return value === 'true';
+    } catch (e) {
+      console.error('Error reading justLoggedOut flag:', e);
+      return false;
+    }
+  }
+  /**
    * Limpia solo las credenciales de usuario
    */
   async clearUserCredentials(): Promise<boolean> {
@@ -59,7 +79,8 @@ class KeychainService {
         credentials.username,
         credentials.password,
         {
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY
         }
       );
       return true;
