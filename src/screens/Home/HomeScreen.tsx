@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAvisos } from '../../context/AvisosContext';
 import { usePendingSignatures } from '../../context/PendingSignaturesContext';
 import { useSession } from '../../context/SessionContext';
 import { StorageManager } from '../../utils/storage';
@@ -29,60 +30,88 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   const { token } = useSession();
   // Estado para el número de firmas pendientes
   const [pendingCount, setPendingCount] = useState<number | null>(null);
-  const { pendingSignatures, setPendingSignatures } = usePendingSignatures();
+  const { setPendingSignatures } = usePendingSignatures();
+  const { avisos, setAvisos } = useAvisos();
+  const [loadingAvisos, setLoadingAvisos] = useState(false);
   const [loadingPending, setLoadingPending] = useState(false);
 
-  // Llama al backend para obtener el número de firmas pendientes usando POST
+  // Llama al backend para obtener firmas pendientes y avisos usando POST
   useEffect(() => {
-    const fetchPendingSignatures = async () => {
+    const fetchData = async () => {
       setLoadingPending(true);
+      setLoadingAvisos(true);
       try {
         if (!token) return;
         const config = await StorageManager.getAppConfig();
         if (!config || !(config as any).UrlSwagger) throw new Error('No se encontró la URL base en la configuración');
-        // Asegura que la URL termina en / y concatena el endpoint correcto
         let baseUrl = (config as any).UrlSwagger;
         if (!baseUrl.endsWith('/')) baseUrl += '/';
         const url = `${baseUrl}avisos/getAvisos`;
-        const body = {
+
+        // Firmas pendientes
+        const bodyFirmas = {
           token,
           reader: "0",
           deleted: "0",
           document: "1"
         };
-        console.log('[HomeScreen][TRACE] URL de firmas pendientes (POST):', url);
-        console.log('[HomeScreen][TRACE] Body de firmas pendientes:', body);
-        const response = await fetch(url, {
+        const responseFirmas = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+          body: JSON.stringify(bodyFirmas)
         });
-        console.log('[HomeScreen][TRACE] Status:', response.status);
-        let data;
+        let dataFirmas;
         try {
-          data = await response.json();
+          dataFirmas = await responseFirmas.json();
         } catch (e) {
-          console.log('[HomeScreen][TRACE] Error parseando JSON de firmas pendientes:', e);
-          data = null;
+          dataFirmas = null;
         }
-        console.log('[HomeScreen][TRACE] Respuesta firmas pendientes:', data);
-        // El backend devuelve un objeto AvisosTable, normalmente con un array de avisos en una propiedad
-        if (!response.ok) throw new Error('Error al obtener firmas pendientes');
-        if (data && Array.isArray(data.avisos)) {
-          setPendingCount(data.avisos.length);
-          setPendingSignatures(data.avisos);
+        if (!responseFirmas.ok) throw new Error('Error al obtener firmas pendientes');
+        if (dataFirmas && Array.isArray(dataFirmas.avisos)) {
+          setPendingCount(dataFirmas.avisos.length);
+          setPendingSignatures(dataFirmas.avisos);
         } else {
           setPendingCount(0);
           setPendingSignatures([]);
         }
+
+        // Avisos
+        const bodyAvisos = {
+          token,
+          reader: "0",
+          deleted: "0",
+          document: "0"
+        };
+        const responseAvisos = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyAvisos)
+        });
+        let dataAvisos;
+        try {
+          dataAvisos = await responseAvisos.json();
+        } catch (e) {
+          dataAvisos = null;
+        }
+        if (!responseAvisos.ok) throw new Error('Error al obtener avisos');
+        if (dataAvisos && Array.isArray(dataAvisos.avisos)) {
+          setAvisos(dataAvisos.avisos);
+          console.log('AVISOS:', JSON.stringify(dataAvisos.avisos, null, 2));
+        } else {
+          setAvisos([]);
+        }
       } catch (err) {
         setPendingCount(null);
-        console.error('Error fetching pending signatures:', err);
+        setPendingSignatures([]);
+        setAvisos([]);
+        console.error('Error fetching firmas/avisos:', err);
       } finally {
         setLoadingPending(false);
+        setLoadingAvisos(false);
       }
     };
-    fetchPendingSignatures();
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [configData, setConfigData] = useState<any>(null);
@@ -116,8 +145,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   };
   
   const handlePortadirmas = () => {
-    // Al navegar a portafirmas, pasa los datos de firmas pendientes si están disponibles
-    onNavigate?.('portafirmas', pendingSignatures);
+    // Al navegar a portafirmas
+    onNavigate?.('portafirmas');
   };
 
   const handleAvisos = () => {
@@ -197,7 +226,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
               subtitle="Consulta tus notificaciones importantes"
               gifSource={require('../../assets/images/notificacion-unscreen.gif')}
               infoIcon="notification-important"
-              infoText="Nuevos avisos: 3"
+              infoText={
+                loadingAvisos
+                  ? 'Nuevos avisos: ...'
+                  : avisos && Array.isArray(avisos)
+                    ? `Nuevos avisos: ${avisos.length}`
+                    : 'Nuevos avisos: ?'
+              }
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.cardTouchable} onPress={handleCalendario} activeOpacity={0.9}>

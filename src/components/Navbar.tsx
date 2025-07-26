@@ -10,9 +10,11 @@ interface NavbarProps {
   onUserMenuToggle?: () => void;
   rightContent?: React.ReactNode;
   title?: string;
+  bgColor?: string;
+  textColor?: string;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent, title }) => {
+const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent, title, bgColor, textColor }) => {
   const [imgUsuario, setImgUsuario] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -24,13 +26,13 @@ const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent, title }
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
-      <View style={styles.gradientNavbar}>
-        <View style={styles.navbarContent}>
+      <StatusBar barStyle={bgColor === '#fff' ? 'dark-content' : 'light-content'} backgroundColor={bgColor || theme.colors.primary.main} />
+      <View style={[styles.gradientNavbar, bgColor ? { backgroundColor: bgColor } : null]}>
+        <View style={[styles.navbarContent, bgColor ? { backgroundColor: bgColor } : null]}>
           {/* Título a la izquierda y tamaño ajustado */}
           <View style={styles.navbarTitleContainerLeft}>
             {title && (
-              <Typography style={styles.navbarTitleLeft} numberOfLines={1} ellipsizeMode="tail">
+              <Typography style={StyleSheet.flatten([styles.navbarTitleLeft, textColor ? { color: textColor } : null])} numberOfLines={1} ellipsizeMode="tail">
                 {title}
               </Typography>
             )}
@@ -42,7 +44,7 @@ const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent, title }
                 {imgUsuario ? (
                   <Avatar src={imgUsuario} size={36} variant="circular" />
                 ) : (
-                  <MaterialIcons name="account-circle" size={28} color="#fff" />
+                  <MaterialIcons name="account-circle" size={28} color={textColor || '#fff'} />
                 )}
               </TouchableOpacity>
             )}

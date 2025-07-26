@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, TextStyle, StyleProp } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Typography } from './Typography';
-
 interface DashboardCardProps {
   title: string;
   subtitle: string;
@@ -13,6 +12,11 @@ interface DashboardCardProps {
   infoText?: string;
   left?: React.ReactNode;
   footer?: React.ReactNode;
+  cardStyle?: any;
+  titleStyle?: StyleProp<TextStyle>;
+  subtitleStyle?: StyleProp<TextStyle>;
+  infoTextStyle?: StyleProp<TextStyle>;
+  infoIconColor?: string;
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -20,13 +24,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   subtitle,
   icon,
   gifSource,
+  // onPress, // removed to fix unused variable error
   infoIcon,
   infoText,
   left,
   footer,
+  cardStyle,
+  titleStyle,
+  subtitleStyle,
+  infoTextStyle,
+  infoIconColor,
 }) => {
   return (
-    <View style={styles.modernCard}>
+    <View style={[styles.modernCard, cardStyle]}>
       {footer && <View style={styles.cardFooterAbsolute}>{footer}</View>}
       {left ? (
         <View style={styles.cardIconSection}>{left}</View>
@@ -42,19 +52,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       <View style={styles.cardContentSection}>
         <Typography
           variant="h4"
-          style={styles.cardTitle}
+          style={StyleSheet.flatten([styles.cardTitle, titleStyle])}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {title}
         </Typography>
         <View style={styles.cardInfoRow}>
-          {infoIcon && <MaterialIcons name={infoIcon} size={18} color="#444" style={styles.cardInfoIcon} />}
-          <Typography variant="body2" style={styles.cardInfoText}>{infoText}</Typography>
+          {infoIcon && <MaterialIcons name={infoIcon} size={18} color={infoIconColor || "#444"} style={styles.cardInfoIcon} />}
+          <Typography variant="body2" style={StyleSheet.flatten([styles.cardInfoText, infoTextStyle])}>{infoText}</Typography>
         </View>
         <Typography
           variant="body2"
-          style={styles.cardSubtitle}
+          style={StyleSheet.flatten([styles.cardSubtitle, subtitleStyle])}
           numberOfLines={2}
           ellipsizeMode="tail"
         >
