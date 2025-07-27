@@ -17,7 +17,6 @@ export type RootStackParamList = {
   Portafirmas: undefined;
   Avisos: undefined;
   Calendario: undefined;
-  DocumentoPDF: { idDocumento: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
