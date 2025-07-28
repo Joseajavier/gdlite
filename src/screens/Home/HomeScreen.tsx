@@ -70,6 +70,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
         if (dataFirmas && Array.isArray(dataFirmas.avisos)) {
           setPendingCount(dataFirmas.avisos.length);
           setPendingSignatures(dataFirmas.avisos);
+          console.log('FIRMAS:', JSON.stringify(dataFirmas.avisos, null, 2));
         } else {
           setPendingCount(0);
           setPendingSignatures([]);
@@ -96,7 +97,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
         if (!responseAvisos.ok) throw new Error('Error al obtener avisos');
         if (dataAvisos && Array.isArray(dataAvisos.avisos)) {
           setAvisos(dataAvisos.avisos);
-          console.log('AVISOS:', JSON.stringify(dataAvisos.avisos, null, 2));
         } else {
           setAvisos([]);
         }

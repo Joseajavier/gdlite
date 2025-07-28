@@ -70,18 +70,28 @@ const AvisoDetalle = ({ route, navigation }: any) => {
           token,
           id: aviso.idRegistro
         };
+        console.log('[fetchExpediente] URL:', url);
+        console.log('[fetchExpediente] Body:', bodyRegistros);
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bodyRegistros)
         });
-        const data = await response.json();
+        console.log('[fetchExpediente] Status:', response.status);
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (jsonErr) {
+          console.log('[fetchExpediente] Error parsing JSON:', jsonErr);
+        }
+        console.log('[fetchExpediente] Data:', data);
         if (!response.ok || !data) throw new Error('Error al obtener expediente');
         if (data.error || data.message) {
           throw new Error(data.error || data.message);
         }
         setExpediente(data);
       } catch (err: any) {
+        console.log('[fetchExpediente] Error:', err);
         setErrorExpediente(err.message || 'Error desconocido');
         setExpediente(null);
       } finally {

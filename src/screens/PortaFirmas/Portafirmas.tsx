@@ -1,187 +1,138 @@
+
 import React, { useState } from 'react';
-import { FlatList, Text } from 'react-native';
-import DashboardCard from '../../components/DashboardCard';
-import { Avatar } from '../../components/Avatar';
-import { usePendingSignatures } from '../../context/PendingSignaturesContext';
-import { View, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
-import UserMenuFull from '../../components/UserMenuFull';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/AppNavigator';
-import { Typography } from '../../components/Typography';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+
 import { theme } from '../../styles/theme';
+import { Avatar } from '../../components/Avatar';
+import { Typography } from '../../components/Typography';
+import { usePendingSignatures } from '../../context/PendingSignaturesContext';
 import MainLayout from '../../components/MainLayout';
+import UserMenuFull from '../../components/UserMenuFull';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+const BUTTON_WIDTH = 80;
 
-const Portafirmas: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
-  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const handleUserMenuToggle = () => {
-    setShowUserMenu(!showUserMenu);
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Cerrar Sesión', 
-          style: 'destructive', 
-          onPress: () => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          }
-        },
-      ]
-    );
-  };
-
-  const handleMenuOption = (option: string) => {
-    setShowUserMenu(false);
-    switch (option) {
-      case 'profile':
-        Alert.alert('Perfil', 'Funcionalidad en desarrollo');
-        break;
-      case 'settings':
-        Alert.alert('Configuración', 'Funcionalidad en desarrollo');
-        break;
-      case 'logout':
-        handleLogout();
-        break;
-    }
-  };
-
-  const handleBottomNavigation = (screen: string) => {
-    switch (screen) {
-      case 'home':
-        navigation.goBack(); // Volver a la pantalla anterior (Home)
-        break;
-      case 'portafirmas':
-        // Ya estamos en portafirmas, no hacer nada
-        break;
-      case 'avisos':
-        navigation.navigate('Avisos');
-        break;
-      case 'calendario':
-        navigation.navigate('Calendario');
-        break;
-      default:
-        Alert.alert('Navegación', `Funcionalidad de ${screen} en desarrollo`);
-    }
-  };
-
+const Portafirmas = () => {
   const { pendingSignatures } = usePendingSignatures();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const navigation = useNavigation<NavigationProp<any>>();
 
-  const renderFirmas = () => {
-    if (!pendingSignatures || pendingSignatures.length === 0) {
-      return (
-        <Text style={styles.noFirmasText}>
-          No tienes firmas pendientes.
-        </Text>
-      );
-    }
+  const handleUserMenuToggle = () => setShowUserMenu((v) => !v);
+
+  const handleMenuOption = (option: any) => {
+    // Manejo de opciones del menú de usuario
+  };
+
+  const renderRightActions = (_: any, __: any, item: any) => (
+    <View style={styles.actionsContainer}>
+      <TouchableOpacity
+        style={styles.actionButtonDetalle}
+        onPress={() => navigation.navigate('DetalleFirma', {
+          documento: item?.comentario || 'Sin documento',
+          idDocumento: item?.idDocumento || item?.id || item?.Id
+        })}
+      >
+        <MaterialIcons name="info" size={24} color="#fff" />
+        <Typography style={styles.actionLabelWhite}>Detalle</Typography>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionButtonResponder} onPress={() => Alert.alert('Firmar', `Firmar documento de: ${item?.nombreUsuario || 'Usuario'}`)}>
+        <MaterialIcons name="edit" size={24} color="#fff" />
+        <Typography style={styles.actionLabelWhite}>Firmar</Typography>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionButtonNoLeido} onPress={() => Alert.alert('Rechazar', `Rechazar documento de: ${item?.nombreUsuario || 'Usuario'}`)}>
+        <MaterialIcons name="close" size={24} color="#fff" />
+        <Typography style={styles.actionLabelWhite}>Rechazar</Typography>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderFirma = ({ item }: { item: any }) => {
+    // Se eliminó la variable fechaCorta y el cálculo de fecha
+
+    const comment = item?.comentario?.trim() ? item.comentario : 'Sin comentario';
     return (
-      <FlatList
-        data={pendingSignatures}
-        keyExtractor={(item, idx) => item.Id?.toString() || item.id?.toString() || idx.toString()}
-        renderItem={({ item }) => {
-          console.log('Portafirmas item:', item);
-          return (
-            <View style={styles.firmaRow}>
-              <DashboardCard
-                title={item.nombreUsuario || 'Sin usuario'}
-                subtitle={item.comentario || 'Sin comentario'}
-                infoIcon="calendar-today"
-                infoText={item.Fecha || item.fecha || 'Sin fecha'}
-                left={
-                  <Avatar
-                    src={item.ImgUsuario}
-                    size={54}
-                    style={styles.avatarMargin}
-                  />
-                }
-                footer={
-                  <View style={styles.cardIconCenterRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (item.idDocumento) {
-                          navigation.navigate('DocumentoPDF', { idDocumento: item.idDocumento });
-                        } else {
-                          Alert.alert('Sin documento', 'No se encontró el idDocumento para este registro.');
-                        }
-                      }}
-                    >
-                      <MaterialIcons name="touch-app" size={44} color="#666CFF" style={styles.touchIconLarge} />
-                    </TouchableOpacity>
-                  </View>
-                }
-              />
+      <Swipeable
+        renderRightActions={(prog, dragX) => renderRightActions(prog, dragX, item)}
+        overshootRight={false}
+        rightThreshold={BUTTON_WIDTH}
+      >
+        <View style={styles.swipeContainer}>
+          <View style={styles.mailCard}>
+            <View style={styles.mailHeaderRow}>
+              <View style={styles.rowAlignCenterFlex1}>
+                <Avatar src={item?.ImgUsuario} size={44} style={styles.avatarMargin} />
+                <View style={styles.flex1}>
+                  <Typography style={styles.mailSenderText}>
+                    Documento enviado por: {item?.nombreUsuario || 'Sin usuario'}
+                  </Typography>
+                  <Typography style={styles.mailJobText}>
+                    {item?.puestoTrabajo || item?.puesto || 'Sin puesto'}
+                  </Typography>
+                </View>
+              </View>
             </View>
-          );
-        }}
-        contentContainerStyle={styles.firmasListContent}
-      />
+
+            <View style={styles.mailSubjectRow}>
+              <Typography style={styles.mailSubjectText}>{comment}</Typography>
+            </View>
+          </View>
+        </View>
+      </Swipeable>
     );
   };
 
   return (
-    <MainLayout title="Portafirmas" onUserMenuToggle={handleUserMenuToggle} bottomNav={
-      <View style={styles.bottomNavigation}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => handleBottomNavigation('home')}
-        >
-          <Image source={require('../../assets/images/home.gif')} style={styles.navIconGif} resizeMode="contain" />
-          <Typography style={styles.navItemText}>Inicio</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.navItem, styles.navItemActive]}
-          onPress={() => handleBottomNavigation('portafirmas')}
-        >
-          <Image source={require('../../assets/images/firma-unscreen.gif')} style={styles.navIconGifActive} resizeMode="contain" />
-          <Typography style={styles.navItemTextActive}>Portafirmas</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => handleBottomNavigation('avisos')}
-        >
-          <Image source={require('../../assets/images/notificacion-unscreen.gif')} style={styles.navIconGif} resizeMode="contain" />
-          <Typography style={styles.navItemText}>Avisos</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => handleBottomNavigation('calendario')}
-        >
-          <Image source={require('../../assets/images/calendar.gif')} style={styles.navIconGif} resizeMode="contain" />
-          <Typography style={styles.navItemText}>Calendario</Typography>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => handleBottomNavigation('ia')}
-        >
-          <Image source={require('../../assets/images/inteligencia-artificial.gif')} style={styles.navIconGif} resizeMode="contain" />
-          <Typography style={styles.navItemText}>IA</Typography>
-        </TouchableOpacity>
-      </View>
-    }>
-      {/* User Menu Dropdown (componente reutilizable) */}
+    <MainLayout
+      title="Portafirmas"
+      onUserMenuToggle={handleUserMenuToggle}
+      bottomNav={
+        <View style={styles.bottomNavigation}>
+          {[
+            { name: 'Home', icon: require('../../assets/images/home.gif'), label: 'Inicio' },
+            { name: 'Portafirmas', icon: require('../../assets/images/firma-unscreen.gif'), label: 'Portafirmas', active: true },
+            { name: 'Avisos', icon: require('../../assets/images/notificacion-unscreen.gif'), label: 'Avisos' },
+            { name: 'Calendario', icon: require('../../assets/images/calendar.gif'), label: 'Calendario' },
+            { name: 'IA', icon: require('../../assets/images/inteligencia-artificial.gif'), label: 'IA' },
+          ].map((tab, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[styles.navItem, tab.active && styles.navItemActive]}
+              onPress={() => navigation.navigate(tab.name)}
+            >
+              <Image
+                source={tab.icon}
+                style={tab.active ? styles.navIconGifActive : styles.navIconGif}
+                resizeMode="contain"
+              />
+              <Typography style={tab.active ? styles.navItemTextActive : styles.navItemText}>
+                {tab.label}
+              </Typography>
+            </TouchableOpacity>
+          ))}
+        </View>
+      }
+    >
       <UserMenuFull
         visible={showUserMenu}
         onClose={() => setShowUserMenu(false)}
-        onOption={option => handleMenuOption(option)}
+        onOption={handleMenuOption}
         styles={styles}
       />
       <View style={styles.content}>
-        {/* Main Content Area */}
         <View style={styles.contentArea}>
-          {renderFirmas()}
+          {pendingSignatures?.length ? (
+            <FlatList
+              data={pendingSignatures}
+              keyExtractor={(it, ix) => it.Id?.toString() || it.id?.toString() || ix.toString()}
+              renderItem={renderFirma}
+              contentContainerStyle={styles.firmasListContent}
+            />
+          ) : (
+            <Typography style={styles.noFirmasText}>No tienes firmas pendientes.</Typography>
+          )}
         </View>
       </View>
     </MainLayout>
@@ -189,177 +140,162 @@ const Portafirmas: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  cardIconCenterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 4,
-    gap: 8,
-  },
-  pdfButtonLarge: {
-    backgroundColor: '#F3F3FF',
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginRight: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-  },
-  touchIconLarge: {
-    marginLeft: 0,
-  },
-  pdfButtonRowSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    gap: 2,
-  },
-  pdfButtonSmall: {
-    backgroundColor: '#F3F3FF',
-    borderRadius: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    marginRight: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  touchIconSmall: {
-    marginLeft: 0,
-  },
-  pdfButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
+  content: { flex: 1, backgroundColor: '#F8F8FA' },
+  contentArea: { flex: 1, padding: 12 },
+  firmasListContent: { paddingBottom: 24 },
   noFirmasText: {
     textAlign: 'center',
-    marginTop: 24,
-    color: theme.colors.text.secondary,
+    color: '#999',
+    fontSize: 15,
+    marginTop: 32,
   },
-  firmaRow: {
+  flex1: { flex: 1 },
+  avatarMargin: { marginRight: 8 },
+  actionsContainer: {
+    width: BUTTON_WIDTH * 3,
     flexDirection: 'row',
+    height: 160,
+  },
+  actionButtonDetalle: {
+    width: BUTTON_WIDTH,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
-    marginVertical: 6,
+    padding: 8,
+    backgroundColor: '#3366FF',
   },
-  avatarMargin: {
-    marginRight: 14,
+  actionButtonResponder: {
+    width: BUTTON_WIDTH,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#4CAF50',
   },
-  firmasListContent: {
-    paddingBottom: 32,
+  actionButtonNoLeido: {
+    width: BUTTON_WIDTH,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#E53935', // rojo fuerte
   },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.default,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 16,
-  },
-  contentArea: {
-    flex: 1,
-    // Elimina el centrado vertical y horizontal para que FlatList ocupe todo el ancho
-    // justifyContent: 'center',
-    // alignItems: 'center',
-    // paddingVertical: 32,
-  },
-  sectionTitle: {
-    color: theme.colors.text.primary,
-    fontWeight: '700',
-    marginBottom: 12,
+  actionLabelWhite: {
+    color: '#fff',
+    fontSize: 11,
+    marginTop: 4,
     textAlign: 'center',
+    fontWeight: '600',
   },
-  sectionSubtitle: {
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
+  swipeContainer: {
+    width: '100%',
+    height: 160,
+    paddingHorizontal: 12,
+    marginBottom: 10,
   },
-  logoContainer: {
-    backgroundColor: theme.colors.primary.main,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  mailCard: {
+    height: 160,
+    backgroundColor: '#fff',
+    borderColor: theme.colors.primary.main,
+    borderWidth: 1.5,
+    borderRadius: 18,
+    overflow: 'hidden',
   },
-  logoText: {
-    color: theme.colors.common.white,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  // NavbarContent styles - Adaptado de GdAdmin
-  navbarContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#666CFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  navbarLeftSection: {
+  mailHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  navbarRightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 2,
     gap: 8,
   },
-  navToggle: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 6,
-    minWidth: 40,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navbarUserAction: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 18,
-    minWidth: 36,
-    minHeight: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4,
-  },
-  pdfButton: {
-    marginLeft: 12,
-    backgroundColor: '#666CFF',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    alignSelf: 'center',
-  },
-  pdfButtonRow: {
+  rowAlignCenterFlex1: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
   },
-  touchIconCardContainer: {
-    alignItems: 'center',
-    marginLeft: 12,
+  mailSenderText: {
+    fontSize: 13,
+    color: theme.colors.text.primary,
+    fontWeight: '600',
   },
-  touchTextCard: {
-    color: '#666CFF',
-    fontSize: 10,
+  mailJobText: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    fontWeight: '400',
+  },
+  mailSubjectRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  mailSubjectText: {
+    fontSize: 15,
+    color: theme.colors.text.primary,
     fontWeight: '500',
-    marginTop: -2,
+    lineHeight: 22,
   },
-  // Bottom Navigation styles
+  mailActionsRowNoBorder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 2,
+    gap: 4,
+  },
+  mailPrioridadText: {
+    fontSize: 12,
+    color: '#222',
+    fontWeight: '700',
+    backgroundColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 8,
+    minWidth: 80,
+  },
+  mailDateText: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    fontWeight: '400',
+    textAlign: 'right',
+    minWidth: 120,
+  },
+  extraInfoContainer: {
+    marginTop: 8,
+    backgroundColor: '#f8f8fa',
+    borderRadius: 12,
+    padding: 10,
+  },
+  extraInfoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.primary.main,
+    marginBottom: 6,
+  },
+  extraInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  extraInfoLabel: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    fontWeight: '600',
+    minWidth: 90,
+  },
+  extraInfoValue: {
+    fontSize: 12,
+    color: theme.colors.text.primary,
+    fontWeight: '400',
+    flex: 1,
+  },
+  extraInfoEstado: {
+    fontSize: 12,
+    color: '#fff',
+    backgroundColor: '#ffe600',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    fontWeight: '700',
+  },
   bottomNavigation: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -392,7 +328,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     marginBottom: 4,
-    // No tintColor para mantener el color original del gif
   },
   navItemText: {
     fontSize: 10,
