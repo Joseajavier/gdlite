@@ -27,8 +27,6 @@
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
-        <false/>
-        <key>NSAllowsLocalNetworking</key>
         <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
@@ -58,6 +56,10 @@
       <string>SimpleLineIcons.ttf</string>
       <string>Zocial.ttf</string>
     </array>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>file</string>
+    </array>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
       <string>arm64</string>
@@ -68,6 +70,10 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
 </dict>

@@ -46,6 +46,38 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [lastUser, setLastUser] = useState<string | null>(null);
   // Estado para la URL del avatar
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Estado y refs para el reset oculto
+  const [resetFeedback, setResetFeedback] = useState(false);
+  const tapCountRef = useRef(0);
+  const lastTapRef = useRef(0);
+
+  // Trigger oculto: 4 taps en GdLite
+  const handleSecretTap = async () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 1000) {
+      tapCountRef.current += 1;
+    } else {
+      tapCountRef.current = 1;
+    }
+    lastTapRef.current = now;
+    if (tapCountRef.current === 4) {
+      tapCountRef.current = 0;
+      // Borrar datos igual que al desinstalar
+      await keychainService.clearAll();
+      setResetFeedback(true);
+      setTimeout(() => setResetFeedback(false), 2000);
+      // Limpiar sesión y config
+      setLastUser(null);
+      setAvatarUrl(null);
+      setFormData({ user: '', password: '' });
+      clearSession();
+      // Navegar al escáner QR si existe (ajusta el nombre según tu navegación)
+      if (typeof navigation !== 'undefined' && navigation && navigation.navigate) {
+        navigation.navigate('StartupScreen');
+      }
+      Alert.alert('Datos borrados', 'La información se ha eliminado. Escanea un QR para continuar.');
+    }
+  };
 
   const isFocused = useIsFocused();
   useEffect(() => {
@@ -332,9 +364,27 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             {/* Logo, título y avatar */}
             <View style={styles.headerSection}>
               <View style={styles.logoContainer}>
-                <Typography variant="h1" style={styles.logoText}>
-                  GdLite
-                </Typography>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleSecretTap} style={{ alignItems: 'center' }}>
+                  <Typography variant="h1" style={styles.logoText}>
+                    GdLite
+                  </Typography>
+                  {resetFeedback && (
+                    <View style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(255,0,0,0.7)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderRadius: 16,
+                      zIndex: 10,
+                    }}>
+                      <Typography style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>RESET</Typography>
+                    </View>
+                  )}
+                </TouchableOpacity>
               </View>
               {/* Avatar centrado debajo del logo si hay avatarUrl */}
               {avatarUrl && (

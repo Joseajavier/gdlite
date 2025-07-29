@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Animated, Easing, Platform, SafeAreaView, View, Alert, StyleSheet, Text } from 'react-native';
 import { Typography } from '../../components/Typography';
 import { Button } from '../../components/Button';
@@ -6,7 +7,7 @@ import { Card } from '../../components/Card';
 import { theme } from '../../styles/theme';
 import { check, request, PERMISSIONS, RESULTS, openSettings } from 'react-native-permissions';
 import { keychainService, AppConfigData } from '../../services/keychainService';
-import { validateQRData, qrDataToAppConfig, getQRDataSummary } from '../../utils/qrValidators';
+import { validateQRData } from '../../utils/qrValidators';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
 interface QRScannerProps {
@@ -20,21 +21,37 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
 
-  // Comprobar si ya hay configuración guardada
+  // Comprobar si es la primera ejecución tras instalar y limpiar datos si es necesario
   useEffect(() => {
-    const checkConfig = async () => {
+    const checkFirstRunAndConfig = async () => {
       try {
+        const firstRunFlag = await AsyncStorage.getItem('firstRunFlag');
+        if (!firstRunFlag) {
+          // Primera ejecución tras instalar: limpiar todo
+          console.log('[QRScanner] Primera ejecución tras instalar. Limpiando datos...');
+          await keychainService.clearAppConfig?.();
+          await keychainService.clearUserCredentials?.();
+          // Si usas StorageManager, limpia también:
+          try {
+            const storage = await import('../../utils/storage');
+            await storage.StorageManager.clearAppConfig?.();
+          } catch (e) { /* ignorar si no existe */ }
+          // Limpiar absolutamente todo AsyncStorage
+          await AsyncStorage.clear();
+          await AsyncStorage.setItem('firstRunFlag', 'true');
+        }
+        // Ahora comprobar si hay config guardada
         const config = await keychainService.getAppConfig();
         if (config) {
           if (onScanSuccess) onScanSuccess(config);
           setHasConfig(true);
         }
       } catch (error) {
-        console.error('[QRScanner] Error comprobando config guardada:', error);
+        console.error('[QRScanner] Error comprobando config guardada o limpiando:', error);
       }
       setCheckingConfig(false);
     };
-    checkConfig();
+    checkFirstRunAndConfig();
   }, [onScanSuccess]);
 
   // Animación línea de escaneo
@@ -142,21 +159,18 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
     requestCameraPermission();
   }, [requestCameraPermission]);
 
-  // -------- INTEGRACIÓN SOLO PARA iOS --------
-  // Escaneo automático de QR solo en iOS
+  // Escaneo automático de QR en iOS y Android
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: codes => {
-      console.log('QR Escaneado: ', codes);  // Verifica si se está escaneando
-      if (Platform.OS !== 'ios') return;  // Solo procesamos en iOS
+      console.log('QR Escaneado: ', codes);
       if (codes.length > 0 && !scanned) {
-        console.log('Código QR detectado:', codes[0].value);  // Verifica el valor del QR
+        console.log('Código QR detectado:', codes[0].value);
         setScanned(true);
         handleQRCodeScanned({ data: codes[0].value });
       }
     }
   });
-  // --------------------------------------------
 
   // Lógica para manejar el escaneo del QR
   const handleQRCodeScanned = async (scanResult: any) => {
@@ -282,7 +296,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) =>
                   NombreCompleto: 'ADD4U ',
                   NombreUsuario: 'add4u',
                   ImgUsuario: 'https://add4ux.s3.amazonaws.com/public/imagenes/DC46F4C8B087C14FA18D796748A0F210.com/public/images/4EE393F36705E04FBE7248D8B2055803jpeg',
-                  UrlSwagger: 'http://localhost:8080/GestDocX/',
+                  UrlSwagger: 'http://gestdocj.add4u/GestDocX/ltsrv/',
                   ColorPrimario: 'primary',
                 })
               })}
