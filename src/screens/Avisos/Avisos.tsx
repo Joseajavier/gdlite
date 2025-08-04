@@ -24,8 +24,11 @@ const BUTTON_WIDTH = 80; // ancho de cada botón
 const Avisos: React.FC = () => {
   const [avisoActual, setAvisoActual] = useState<any>(null);
   const [responderVisible, setResponderVisible] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const navigation = useNavigation<NavigationProp<any>>();
   const { avisos } = useAvisos();
+
+  const handleUserMenuToggle = () => setShowUserMenu((v) => !v);
 
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
@@ -159,9 +162,13 @@ const Avisos: React.FC = () => {
       >
         <View style={styles.swipeContainer}>
           <View style={styles.mailCard}>
+            {/* Icono de deslizamiento en la esquina superior derecha */}
+            <View style={styles.swipeHintIconContainer}>
+              <MaterialIcons name="swipe" size={22} color="#bbb" />
+            </View>
             <View style={styles.mailHeaderRow}>
               <View style={styles.rowAlignCenterFlex1}>
-                <Avatar src={item?.ImgUsuario} size={44} style={styles.avatarMargin} />
+                <Avatar src={item?.ImgUsuario} alt={item?.nombreUsuario} size={44} style={styles.avatarMargin} />
                 <View style={styles.flex1}>
                   <Typography style={styles.mailSenderText}>
                     Aviso enviado por: {item?.nombreUsuario || 'Sin usuario'}
@@ -256,6 +263,7 @@ const Avisos: React.FC = () => {
     <>
       <MainLayout
         title="Despacho de Asuntos"
+        onUserMenuToggle={handleUserMenuToggle}
         bottomNav={
           <View style={styles.bottomNav}>
             {[
@@ -314,6 +322,19 @@ const Avisos: React.FC = () => {
             <Typography style={styles.noAvisos}>No hay avisos disponibles</Typography>
           )}
         </View>
+
+      {/* Overlay para cerrar menú de usuario con borde azul solo en Avisos */}
+      {showUserMenu && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, justifyContent: 'flex-start', alignItems: 'flex-end' }}>
+          <TouchableOpacity style={{ flex: 1, position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setShowUserMenu(false)} />
+          <View style={{ marginTop: 60, marginRight: 16, borderWidth: 2, borderColor: theme.colors.primary.main, borderRadius: 12, backgroundColor: '#fff', minWidth: 200, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, overflow: 'hidden' }}>
+            {/* Aquí puedes poner el contenido del menú si lo deseas */}
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Typography style={{ color: theme.colors.primary.main, fontWeight: 'bold' }}>Menú de usuario</Typography>
+            </View>
+          </View>
+        </View>
+      )}
       </MainLayout>
 
       {/* El modal de detalle ha sido reemplazado por navegación a la pantalla AvisoDetalle */}
@@ -336,6 +357,15 @@ const Avisos: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  swipeHintIconContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 12,
+    padding: 2,
+  },
   flex1: {
     flex: 1,
   },

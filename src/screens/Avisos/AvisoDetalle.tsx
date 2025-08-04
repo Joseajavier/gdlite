@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import ResponderModal from './ResponderModal';
 
 // Formatea fecha a dd/MM/yyyy HH:mm
 const formatFecha = (fechaStr: string): string => {
@@ -37,6 +38,7 @@ const AvisoDetalle = ({ route, navigation }: any) => {
   const [loadingExpediente, setLoadingExpediente] = useState(false);
   const [errorExpediente, setErrorExpediente] = useState<string | null>(null);
   const { token } = useSession();
+  const [showResponderModal, setShowResponderModal] = useState(false);
 
   const pad = (n: number) => (n < 10 ? `0${n}` : n);
   let fechaCorta = '';
@@ -113,12 +115,13 @@ const AvisoDetalle = ({ route, navigation }: any) => {
             { name: 'Eliminar', icon: 'delete-outline', label: 'Eliminar' },
             { name: 'Mail', icon: 'mail-outline', label: 'Mail' },
             { name: 'Destacar', icon: 'star-outline', label: 'Destacar' },
-            { name: 'Responder', icon: 'reply', label: 'Responder' },
+            { name: 'Responder', icon: 'reply', label: 'Responder', onPress: () => setShowResponderModal(true) },
             { name: 'Reenviar', icon: 'forward-to-inbox', label: 'Reenviar' },
           ].map((tab, i) => (
             <TouchableOpacity
               key={i}
               style={styles.navItem}
+              onPress={tab.onPress}
             >
               <MaterialIcons
                 name={tab.icon}
@@ -270,6 +273,16 @@ const AvisoDetalle = ({ route, navigation }: any) => {
           </ScrollView>
         </PanGestureHandler>
       </View>
+      <ResponderModal
+        visible={showResponderModal}
+        onClose={() => setShowResponderModal(false)}
+        onSend={(mensaje) => {
+          // Aquí puedes manejar el envío del mensaje
+          setShowResponderModal(false);
+        }}
+        para={aviso?.nombreUsuario || ''}
+        de={token || ''}
+      />
     </MainLayout>
   );
 // ...existing code up to the end of the return in AvisoDetalle...

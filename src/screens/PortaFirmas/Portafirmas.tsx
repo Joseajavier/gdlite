@@ -1,5 +1,7 @@
 
 import React, { useState } from 'react';
+import FirmarDocumentoModal from './FirmarDocumentoModal';
+import RechazarFirmaModal from './RechazarFirmaModal';
 import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -15,15 +17,28 @@ import UserMenuFull from '../../components/UserMenuFull';
 const BUTTON_WIDTH = 80;
 
 
+
 const Portafirmas = () => {
   const { pendingSignatures } = usePendingSignatures();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showFirmarModal, setShowFirmarModal] = useState(false);
+  const [showRechazarModal, setShowRechazarModal] = useState(false);
+  const [firmaActual, setFirmaActual] = useState<any>(null);
   const navigation = useNavigation<NavigationProp<any>>();
 
   const handleUserMenuToggle = () => setShowUserMenu((v) => !v);
 
   const handleMenuOption = (option: any) => {
     // Manejo de opciones del menú de usuario
+  };
+
+  const handleFirmar = (item: any) => {
+    setFirmaActual(item);
+    setShowFirmarModal(true);
+  };
+  const handleRechazar = (item: any) => {
+    setFirmaActual(item);
+    setShowRechazarModal(true);
   };
 
   const renderRightActions = (_: any, __: any, item: any) => (
@@ -38,11 +53,11 @@ const Portafirmas = () => {
         <MaterialIcons name="info" size={24} color="#fff" />
         <Typography style={styles.actionLabelWhite}>Detalle</Typography>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.actionButtonResponder} onPress={() => Alert.alert('Firmar', `Firmar documento de: ${item?.nombreUsuario || 'Usuario'}`)}>
+      <TouchableOpacity style={styles.actionButtonResponder} onPress={() => handleFirmar(item)}>
         <MaterialIcons name="edit" size={24} color="#fff" />
         <Typography style={styles.actionLabelWhite}>Firmar</Typography>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.actionButtonNoLeido} onPress={() => Alert.alert('Rechazar', `Rechazar documento de: ${item?.nombreUsuario || 'Usuario'}`)}>
+      <TouchableOpacity style={styles.actionButtonNoLeido} onPress={() => handleRechazar(item)}>
         <MaterialIcons name="close" size={24} color="#fff" />
         <Typography style={styles.actionLabelWhite}>Rechazar</Typography>
       </TouchableOpacity>
@@ -61,6 +76,10 @@ const Portafirmas = () => {
       >
         <View style={styles.swipeContainer}>
           <View style={styles.mailCard}>
+            {/* Icono de deslizamiento en la esquina superior derecha */}
+            <View style={styles.swipeHintIconContainer}>
+              <MaterialIcons name="swipe" size={22} color="#bbb" />
+            </View>
             <View style={styles.mailHeaderRow}>
               <View style={styles.rowAlignCenterFlex1}>
                 <Avatar src={item?.ImgUsuario} size={44} style={styles.avatarMargin} />
@@ -85,61 +104,97 @@ const Portafirmas = () => {
   };
 
   return (
-    <MainLayout
-      title="Portafirmas"
-      onUserMenuToggle={handleUserMenuToggle}
-      bottomNav={
-        <View style={styles.bottomNavigation}>
-          {[
-            { name: 'Home', icon: require('../../assets/images/home.gif'), label: 'Inicio' },
-            { name: 'Portafirmas', icon: require('../../assets/images/firma-unscreen.gif'), label: 'Portafirmas', active: true },
-            { name: 'Avisos', icon: require('../../assets/images/notificacion-unscreen.gif'), label: 'Avisos' },
-            { name: 'Calendario', icon: require('../../assets/images/calendar.gif'), label: 'Calendario' },
-            { name: 'IA', icon: require('../../assets/images/inteligencia-artificial.gif'), label: 'IA' },
-          ].map((tab, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.navItem, tab.active && styles.navItemActive]}
-              onPress={() => navigation.navigate(tab.name)}
-            >
-              <Image
-                source={tab.icon}
-                style={tab.active ? styles.navIconGifActive : styles.navIconGif}
-                resizeMode="contain"
+    <>
+      <MainLayout
+        title="Portafirmas"
+        onUserMenuToggle={handleUserMenuToggle}
+        bottomNav={
+          <View style={styles.bottomNavigation}>
+            {[
+              { name: 'Home', icon: require('../../assets/images/home.gif'), label: 'Inicio' },
+              { name: 'Portafirmas', icon: require('../../assets/images/firma-unscreen.gif'), label: 'Portafirmas', active: true },
+              { name: 'Avisos', icon: require('../../assets/images/notificacion-unscreen.gif'), label: 'Avisos' },
+              { name: 'Calendario', icon: require('../../assets/images/calendar.gif'), label: 'Calendario' },
+              { name: 'IA', icon: require('../../assets/images/inteligencia-artificial.gif'), label: 'IA' },
+            ].map((tab, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.navItem, tab.active && styles.navItemActive]}
+                onPress={() => navigation.navigate(tab.name)}
+              >
+                <Image
+                  source={tab.icon}
+                  style={tab.active ? styles.navIconGifActive : styles.navIconGif}
+                  resizeMode="contain"
+                />
+                <Typography style={tab.active ? styles.navItemTextActive : styles.navItemText}>
+                  {tab.label}
+                </Typography>
+              </TouchableOpacity>
+            ))}
+          </View>
+        }
+      >
+        <UserMenuFull
+          visible={showUserMenu}
+          onClose={() => setShowUserMenu(false)}
+          onOption={handleMenuOption}
+          styles={styles}
+        />
+        <View style={styles.content}>
+          <View style={styles.contentArea}>
+            {pendingSignatures?.length ? (
+              <FlatList
+                data={pendingSignatures}
+                keyExtractor={(it, ix) => it.Id?.toString() || it.id?.toString() || ix.toString()}
+                renderItem={renderFirma}
+                contentContainerStyle={styles.firmasListContent}
               />
-              <Typography style={tab.active ? styles.navItemTextActive : styles.navItemText}>
-                {tab.label}
-              </Typography>
-            </TouchableOpacity>
-          ))}
+            ) : (
+              <Typography style={styles.noFirmasText}>No tienes firmas pendientes.</Typography>
+            )}
+          </View>
         </View>
-      }
-    >
-      <UserMenuFull
-        visible={showUserMenu}
-        onClose={() => setShowUserMenu(false)}
-        onOption={handleMenuOption}
-        styles={styles}
-      />
-      <View style={styles.content}>
-        <View style={styles.contentArea}>
-          {pendingSignatures?.length ? (
-            <FlatList
-              data={pendingSignatures}
-              keyExtractor={(it, ix) => it.Id?.toString() || it.id?.toString() || ix.toString()}
-              renderItem={renderFirma}
-              contentContainerStyle={styles.firmasListContent}
-            />
-          ) : (
-            <Typography style={styles.noFirmasText}>No tienes firmas pendientes.</Typography>
-          )}
-        </View>
-      </View>
-    </MainLayout>
+      </MainLayout>
+      {/* Modales de firmar y rechazar */}
+      {showFirmarModal && (
+        <FirmarDocumentoModal
+          visible={showFirmarModal}
+          onClose={() => setShowFirmarModal(false)}
+          onFirmar={(cert, pass, motivo) => {
+            setShowFirmarModal(false);
+            // Aquí lógica de firmado real
+            Alert.alert('Firmado', `Cert: ${cert}\nMotivo: ${motivo}`);
+          }}
+          certificados={['Mi Certificado']}
+        />
+      )}
+      {showRechazarModal && (
+        <RechazarFirmaModal
+          visible={showRechazarModal}
+          onClose={() => setShowRechazarModal(false)}
+          onRechazar={(motivo) => {
+            setShowRechazarModal(false);
+            // Aquí lógica de rechazo real
+            Alert.alert('Rechazado', motivo);
+          }}
+        />
+      )}
+    </>
   );
+
 };
 
 const styles = StyleSheet.create({
+  swipeHintIconContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 12,
+    padding: 2,
+  },
   content: { flex: 1, backgroundColor: '#F8F8FA' },
   contentArea: { flex: 1, padding: 12 },
   firmasListContent: { paddingBottom: 24 },

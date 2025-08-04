@@ -158,7 +158,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   };
 
   const handleIA = () => {
-    // IA en desarrollo
+    onNavigate?.('ia');
   };
 
   const handleLogout = () => {

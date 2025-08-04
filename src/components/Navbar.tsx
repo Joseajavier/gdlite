@@ -81,11 +81,6 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     backgroundColor: '#666CFF',
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     minHeight: 64,
   },
   // navbarTitleContainer y navbarTitle ya están definidos arriba con el nuevo tamaño y centrado

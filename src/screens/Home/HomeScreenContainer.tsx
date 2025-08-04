@@ -48,6 +48,9 @@ const HomeScreenContainer: React.FC = () => {
       case 'calendario':
         navigation.navigate('Calendario');
         break;
+      case 'ia':
+        navigation.navigate('IA');
+        break;
       case 'home':
         // Ya estamos en home, no hacer nada
         break;

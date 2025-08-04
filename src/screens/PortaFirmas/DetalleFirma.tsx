@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import FirmarDocumentoModal from './FirmarDocumentoModal';
+import RechazarFirmaModal from './RechazarFirmaModal';
 import {
   View,
   StyleSheet,
@@ -24,6 +26,8 @@ const DetalleFirmaDemoWebView = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [showFirmarModal, setShowFirmarModal] = useState(false);
+  const [showRechazarModal, setShowRechazarModal] = useState(false);
 
   useEffect(() => {
     const loadPdfUrl = async () => {
@@ -84,15 +88,15 @@ const DetalleFirmaDemoWebView = ({ navigation, route }: any) => {
       bottomNav={
         <View style={styles.bottomNav}>
           {[
-            { name: 'Firmar', icon: 'edit-document', label: 'Firmar' },
+            { name: 'Firmar', icon: 'edit-document', label: 'Firmar', onPress: () => setShowFirmarModal(true) },
             { name: 'ComprobarFirma', icon: 'verified', label: 'Comprobar firma' },
-            { name: 'Rechazar', icon: 'block', label: 'Rechazar' },
+            { name: 'Rechazar', icon: 'block', label: 'Rechazar', onPress: () => setShowRechazarModal(true) },
             { name: 'NoLeido', icon: 'remove-red-eye', label: 'No leído' },
           ].map((tab, i) => (
             <TouchableOpacity
               key={i}
               style={styles.navItem}
-              // onPress={() => {}}
+              onPress={tab.onPress}
             >
               <MaterialIcons
                 name={tab.icon}
@@ -148,6 +152,23 @@ const DetalleFirmaDemoWebView = ({ navigation, route }: any) => {
           </View>
         </PanGestureHandler>
       </View>
+      <FirmarDocumentoModal
+        visible={showFirmarModal}
+        onClose={() => setShowFirmarModal(false)}
+        onFirmar={(cert, pass, motivo) => {
+          // Aquí va la lógica de firmado
+          setShowFirmarModal(false);
+        }}
+        certificados={['29-asdfasdf-asdfasdf']}
+      />
+      <RechazarFirmaModal
+        visible={showRechazarModal}
+        onClose={() => setShowRechazarModal(false)}
+        onRechazar={(motivo) => {
+          // Aquí va la lógica de rechazo
+          setShowRechazarModal(false);
+        }}
+      />
     </MainLayout>
   );
 };
