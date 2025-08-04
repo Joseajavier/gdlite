@@ -1,26 +1,51 @@
 import React from 'react';
 import { View, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Avatar } from './Avatar';
+import { Typography } from './Typography';
+import { StorageManager } from '../utils/storage';
 import { theme } from '../styles/theme';
 
 interface NavbarProps {
   onUserMenuToggle?: () => void;
   rightContent?: React.ReactNode;
+  title?: string;
+  bgColor?: string;
+  textColor?: string;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
+const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent, title, bgColor, textColor }) => {
+  const [imgUsuario, setImgUsuario] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      const config = await StorageManager.getAppConfig();
+      setImgUsuario(config?.ImgUsuario || null);
+    })();
+  }, []);
+
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary.main} />
-      <View style={styles.gradientNavbar}>
-        <View style={styles.navbarContent}>
-          {/* Puedes agregar aquí un logo o título si lo necesitas */}
-          <View style={{ flex: 1 }} />
+      <StatusBar barStyle={bgColor === '#fff' ? 'dark-content' : 'light-content'} backgroundColor={bgColor || theme.colors.primary.main} />
+      <View style={[styles.gradientNavbar, bgColor ? { backgroundColor: bgColor } : null]}>
+        <View style={[styles.navbarContent, bgColor ? { backgroundColor: bgColor } : null]}>
+          {/* Título a la izquierda y tamaño ajustado */}
+          <View style={styles.navbarTitleContainerLeft}>
+            {title && (
+              <Typography style={StyleSheet.flatten([styles.navbarTitleLeft, textColor ? { color: textColor } : null])} numberOfLines={1} ellipsizeMode="tail">
+                {title}
+              </Typography>
+            )}
+          </View>
           <View style={styles.navbarRightSection}>
             {rightContent}
             {onUserMenuToggle && (
               <TouchableOpacity onPress={onUserMenuToggle} style={styles.navbarUserAction}>
-                <MaterialIcons name="account-circle" size={28} color="#fff" />
+                {imgUsuario ? (
+                  <Avatar src={imgUsuario} size={36} variant="circular" />
+                ) : (
+                  <MaterialIcons name="account-circle" size={28} color={textColor || '#fff'} />
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -31,6 +56,19 @@ const Navbar: React.FC<NavbarProps> = ({ onUserMenuToggle, rightContent }) => {
 };
 
 const styles = StyleSheet.create({
+  navbarTitleContainerLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  navbarTitleLeft: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 20,
+    letterSpacing: 1,
+    textAlign: 'left',
+    maxWidth: '90%',
+  },
   gradientNavbar: {
     backgroundColor: 'linear-gradient(90deg, #666CFF 0%, #5F5FFF 100%)',
     paddingBottom: 2,
@@ -40,15 +78,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 18,
     backgroundColor: '#666CFF',
     marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    minHeight: 64,
   },
+  // navbarTitleContainer y navbarTitle ya están definidos arriba con el nuevo tamaño y centrado
   navbarRightSection: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -97,6 +97,9 @@ const Calendario: React.FC = () => {
       case 'calendario':
         // Ya estamos en calendario, no hacer nada
         break;
+      case 'ia':
+        navigation.navigate('IA');
+        break;
       default:
         Alert.alert('Navegación', `Funcionalidad de ${screen} en desarrollo`);
     }
@@ -202,7 +205,7 @@ const Calendario: React.FC = () => {
   };
 
   return (
-    <MainLayout onUserMenuToggle={handleUserMenuToggle} bottomNav={
+    <MainLayout title="Calendario" onUserMenuToggle={handleUserMenuToggle} bottomNav={
       <View style={styles.bottomNavigation}>
         <TouchableOpacity 
           style={styles.navItem}

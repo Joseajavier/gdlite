@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useSession } from '../../context/SessionContext';
+import { useIsFocused } from '@react-navigation/native';
 import {
   View,
   StyleSheet,
@@ -18,26 +20,15 @@ import { TextField } from '../../components/TextField';
 import { Card } from '../../components/Card';
 import { theme } from '../../styles/theme';
 import { EyeIcon, EyeOffIcon } from '../../components/icons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { keychainService } from '../../services/keychainService';
 import { authService } from '../../services/authService';
-// Removed unused react-native-permissions import
-import { requestUserPermission } from '../../services/pushNotifications';
-
 const { height } = Dimensions.get('window');
 
-// Tipos para el formulario
 interface LoginFormData {
   user: string;
   password: string;
 }
-
-interface BiometricResult {
-  error?: string;
-  message?: string;
-  code?: string | number;
-  [key: string]: any;
-}
-
 
 interface ErrorState {
   message: string[];
@@ -47,63 +38,127 @@ interface LoginProps {
   onLoginSuccess?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  // Estado para mostrar el último usuario guardado y rellenar el campo usuario siempre
-  const [lastUser, setLastUser] = useState<string | null>(null);
 
+
+const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  const { setSession, clearSession } = useSession();
+  // Estado para mostrar el usuario extraído del QR y rellenar el campo usuario
+  const [lastUser, setLastUser] = useState<string | null>(null);
+  // Estado para la URL del avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Estado y refs para el reset oculto
+  const [resetFeedback, setResetFeedback] = useState(false);
+  const tapCountRef = useRef(0);
+  const lastTapRef = useRef(0);
+
+  // Trigger oculto: 4 taps en GdLite
+  const handleSecretTap = async () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 1000) {
+      tapCountRef.current += 1;
+    } else {
+      tapCountRef.current = 1;
+    }
+    lastTapRef.current = now;
+    if (tapCountRef.current === 4) {
+      tapCountRef.current = 0;
+      // Borrar datos igual que al desinstalar
+      await keychainService.clearAll();
+      setResetFeedback(true);
+      setTimeout(() => setResetFeedback(false), 2000);
+      // Limpiar sesión y config
+      setLastUser(null);
+      setAvatarUrl(null);
+      setFormData({ user: '', password: '' });
+      clearSession();
+      // Navegar al escáner QR si existe (ajusta el nombre según tu navegación)
+      if (typeof navigation !== 'undefined' && navigation && navigation.navigate) {
+        navigation.navigate('StartupScreen');
+      }
+      Alert.alert('Datos borrados', 'La información se ha eliminado. Escanea un QR para continuar.');
+    }
+  };
+
+  const isFocused = useIsFocused();
   useEffect(() => {
     (async () => {
       try {
-        const creds = await keychainService.getUserCredentials();
-        if (creds && creds.username) {
-          setLastUser(creds.username);
-          setFormData({ user: creds.username, password: '' });
+        // Leer config guardada por QR (usando solo los campos originales del QR)
+        const config = await keychainService.getAppConfig();
+        if (config) {
+          console.log('[Login] Config leída:', config);
         } else {
+          console.log('[Login] Config leída: null o no encontrada');
+        }
+        let usuario = '';
+        // Usar solo los campos originales del QR
+        if (config && typeof config.NombreUsuario === 'string' && config.NombreUsuario) {
+          usuario = config.NombreUsuario;
+        } else if (config && typeof config.IdUsuario === 'string' && config.IdUsuario) {
+          usuario = config.IdUsuario;
+        }
+        // Avatar: usar ImgUsuario si existe y es string
+        if (config && typeof config.ImgUsuario === 'string' && config.ImgUsuario) {
+          setAvatarUrl(config.ImgUsuario);
+        } else {
+          setAvatarUrl(null);
+        }
+        if (usuario) {
+          setLastUser(usuario);
+          setFormData(prev => ({ ...prev, user: usuario, password: '' })); // Solo usuario, nunca password
+        } else {
+          setLastUser(null);
           setFormData({ user: '', password: '' });
         }
       } catch (e) {
         setLastUser(null);
         setFormData({ user: '', password: '' });
+        setAvatarUrl(null);
       }
     })();
-  }, []);
+  }, [isFocused]);
 
   // Activar Face ID automáticamente al abrir la app si está disponible y habilitada
   // Estado para saber si Face ID fue exitoso y disparar login automático
   const [pendingAutoLogin, setPendingAutoLogin] = useState(false);
+  const biometricFailures = useRef(0);
+  const [, forceUpdate] = useState(0); // Para forzar render
 
+// Usar métodos estáticos de AuthService para biometría (ajustar si es necesario)
   useEffect(() => {
     const tryBiometricLogin = async () => {
       try {
+        // Eliminar control de justLoggedOut: siempre lanzar Face ID automático
         const biometricsEnabled = await keychainService.getBiometricsEnabled();
         const canUseBiometrics = await authService.canUseBiometrics();
-        console.log('[Biometría] biometricsEnabled:', biometricsEnabled, 'canUseBiometrics:', canUseBiometrics);
-        if (biometricsEnabled && canUseBiometrics) {
+        const creds = await keychainService.getUserCredentials();
+        console.log('[Biometría] biometricsEnabled:', biometricsEnabled, 'canUseBiometrics:', canUseBiometrics, 'creds:', creds);
+        // Solo intentar login biométrico si biometricsEnabled, biometría disponible y hay credenciales guardadas
+        if (biometricsEnabled && canUseBiometrics && creds && creds.username && creds.password) {
           // Intentar login biométrico automático
           const success = await authService.authenticateWithBiometrics();
           console.log('[Biometría] Resultado Face ID:', success);
           if (success) {
-            const creds = await keychainService.getUserCredentials();
-            console.log('[Biometría] Credenciales recuperadas:', creds);
-            if (creds && creds.username && creds.password) {
-              setFormData(prev => ({ ...prev, password: creds.password }));
-              setPendingAutoLogin(true);
-            } else {
-              Alert.alert('Login automático', 'Face ID correcto pero no hay credenciales guardadas.');
-            }
+            setFormData(prev => ({ ...prev, password: creds.password }));
+            setPendingAutoLogin(true);
+            biometricFailures.current = 0;
+            forceUpdate(n => n + 1);
           } else {
+            biometricFailures.current += 1;
+            forceUpdate(n => n + 1);
             Alert.alert('Login automático', 'Face ID fallido o cancelado.');
           }
         } else {
           console.log('[Biometría] No se cumplen condiciones para login automático.');
         }
       } catch (e) {
+        biometricFailures.current += 1;
+        forceUpdate(n => n + 1);
         console.error('[Biometría] Error en login automático:', e);
       }
     };
     tryBiometricLogin();
     // handleLogin no se incluye en dependencias porque es estable y no cambia
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ...existing code...
@@ -145,6 +200,116 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
 
+  // Función para validar el formulario
+  const validateForm = React.useCallback((): boolean => {
+    const newErrors: Partial<LoginFormData> = {};
+    if (!formData.user.trim()) {
+      newErrors.user = 'Este campo es obligatorio';
+    }
+    if (formData.user.trim() && !formData.password.trim()) {
+      newErrors.password = 'Este campo es obligatorio';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  // Función para manejar el login
+  const handleLogin = React.useCallback(async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setErrorState(null);
+    try {
+      // Leer config QR para obtener url y tokenApp
+      const config = await keychainService.getAppConfig();
+      console.log('[Login][TRACE] Config:', config);
+      if (!config || !config.UrlSwagger || !config.TokenAplicacion) {
+        setErrorState({ message: ['Configuración QR inválida.'] });
+        setIsLoading(false);
+        return;
+      }
+      const url = config.UrlSwagger.replace(/\/$/, ''); // quitar barra final si la hay
+      const loginEndpoint = url + '/loginUser?token=' + config.TokenAplicacion;
+      const loginPayload = { user: formData.user, password: formData.password };
+      console.log('[Login][TRACE] POST', loginEndpoint, loginPayload);
+      // 1. POST para obtener token
+      const res = await fetch(loginEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginPayload)
+      });
+      let dataToken;
+      let token;
+      try {
+        dataToken = await res.json();
+        console.log('[Login][TRACE] Respuesta login:', res.status, dataToken);
+        if (dataToken && typeof dataToken.accesToken !== 'undefined') {
+          token = dataToken.accesToken;
+        } else if (dataToken && typeof dataToken.token !== 'undefined') {
+          token = dataToken.token;
+        } else if (dataToken && dataToken.Result && typeof dataToken.Result.token !== 'undefined') {
+          token = dataToken.Result.token;
+        }
+        if (!token) {
+          console.warn('[Login][TRACE] El backend NO devolvió un campo "accesToken" ni "token" ni en Result. dataToken=', dataToken);
+        } else {
+          console.log('[Login][TRACE] Token recibido:', token);
+        }
+      } catch (e) {
+        console.log('[Login][TRACE] Error parseando JSON de login:', e);
+        dataToken = null;
+        token = undefined;
+      }
+      // Nuevo backend: datosUser y no Result
+      if (res.status === 401 || !dataToken || !dataToken.datosUser) {
+        setErrorState({ message: ['Usuario o contraseña incorrectos'] });
+        setIsLoading(false);
+        return;
+      }
+      if (res.status !== 200) {
+        setErrorState({ message: ['Error de autenticación.'] });
+        setIsLoading(false);
+        return;
+      }
+      // Guardar credenciales para biometría (solo si login correcto)
+      await keychainService.saveUserCredentials({
+        username: formData.user,
+        password: formData.password,
+      });
+      await keychainService.saveGenericCredentials({
+        username: formData.user,
+        password: formData.password,
+      });
+      // Guardar token y datos de usuario en contexto global temporal
+      setSession(token, dataToken ? dataToken.datosUser : undefined);
+      if (!biometricsEnabled && canUseBiometrics) {
+        Alert.alert(
+          'Activar Biometría',
+          '¿Deseas activar la autenticación biométrica para futuros accesos?',
+          [
+            { text: 'No', style: 'cancel', onPress: () => {} },
+            { text: 'Sí', onPress: async () => {
+              await keychainService.setBiometricsEnabled(true);
+              setBiometricsEnabled(true);
+            }}
+          ]
+        );
+      }
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      } else {
+        Alert.alert('Éxito', 'Login exitoso', [
+          { text: 'OK', onPress: () => {} }
+        ]);
+      }
+    } catch (error) {
+      console.log('[Login][TRACE] Error general:', error);
+      setErrorState({ message: ['Error de conexión. Inténtelo de nuevo.'] });
+    } finally {
+      setIsLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, biometricsEnabled, canUseBiometrics, onLoginSuccess, validateForm]);
+
   // Lanzar login automático solo cuando el password se rellene por Face ID
   useEffect(() => {
     if (pendingAutoLogin && formData.password) {
@@ -165,103 +330,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return `https://sede.add4u.com/public/GestDoc/loginImages/img${dia}.jpg`;
   };
 
-  // Mover validateForm dentro de handleLogin para evitar advertencia de dependencias
-
-  const handleLogin = React.useCallback(async () => {
-    // Mover validateForm aquí para evitar advertencia de dependencias
-    const validateForm = (): boolean => {
-      const newErrors: Partial<LoginFormData> = {};
-      if (!formData.user.trim()) {
-        newErrors.user = 'Este campo es obligatorio';
-      }
-      // Solo mostrar error de password si el usuario está presente
-      if (formData.user.trim() && !formData.password.trim()) {
-        newErrors.password = 'Este campo es obligatorio';
-      }
-      setErrors(newErrors);
-      return Object.keys(newErrors).length === 0;
-    };
-
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    setErrorState(null);
-
-    try {
-      // Simular llamada a la API de login
-      console.log('[Login] Login attempt:', {
-        user: formData.user,
-        password: formData.password,
-      });
-
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simular respuesta exitosa
-      if (formData.user === 'admin' && formData.password === 'admin') {
-        // Guardar credenciales de usuario
-        console.log('[Login] Guardando credenciales en keychainService...');
-        await keychainService.saveUserCredentials({
-          username: formData.user,
-          password: formData.password,
-        });
-        // Guardar también en el keychain genérico para biometría
-        await keychainService.saveGenericCredentials({
-          username: formData.user,
-          password: formData.password,
-        });
-
-        // Trazas biometría
-        console.log('[Biometría] Estado tras login:', {
-          biometricsEnabled,
-          canUseBiometrics
-        });
-        // Preguntar si desea activar biometría si no está ya activada
-        if (!biometricsEnabled && canUseBiometrics) {
-          console.log('[Biometría] Mostrando alerta para activar biometría...');
-          Alert.alert(
-            'Activar Biometría',
-            '¿Deseas activar la autenticación biométrica para futuros accesos?',
-            [
-              { text: 'No', style: 'cancel', onPress: () => console.log('[Biometría] Usuario NO activa biometría') },
-              { 
-                text: 'Sí', 
-                onPress: async () => {
-                  console.log('[Biometría] Usuario activa biometría, guardando en keychainService...');
-                  await keychainService.setBiometricsEnabled(true);
-                  setBiometricsEnabled(true);
-                }
-              }
-            ]
-          );
-        }
-
-        // Solicitar permisos push solo desde el servicio pushNotifications
-        if (onLoginSuccess) {
-          console.log('[Login] onLoginSuccess callback');
-          onLoginSuccess();
-          await requestUserPermission();
-        } else {
-          await requestUserPermission();
-          Alert.alert('Éxito', 'Login exitoso', [
-            { text: 'OK', onPress: () => console.log('[Login] Redirect to dashboard') }
-          ]);
-        }
-      } else {
-        console.log('[Login] Usuario o contraseña incorrectos');
-        setErrorState({
-          message: ['Usuario o contraseña incorrectos']
-        });
-      }
-    } catch (error) {
-      console.error('[Login] Error en login:', error);
-      setErrorState({
-        message: ['Error de conexión. Inténtelo de nuevo.']
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [formData, biometricsEnabled, canUseBiometrics, onLoginSuccess]);
 
   const handleInputChange = (field: keyof LoginFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -293,13 +361,41 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         {/* Contenido principal */}
         <View style={styles.content}>
           <Card style={styles.loginCard}>
-            {/* Logo y título */}
+            {/* Logo, título y avatar */}
             <View style={styles.headerSection}>
               <View style={styles.logoContainer}>
-                <Typography variant="h1" style={styles.logoText}>
-                  GdLite
-                </Typography>
+                <TouchableOpacity activeOpacity={0.7} onPress={handleSecretTap} style={{ alignItems: 'center' }}>
+                  <Typography variant="h1" style={styles.logoText}>
+                    GdLite
+                  </Typography>
+                  {resetFeedback && (
+                    <View style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(255,0,0,0.7)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderRadius: 16,
+                      zIndex: 10,
+                    }}>
+                      <Typography style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>RESET</Typography>
+                    </View>
+                  )}
+                </TouchableOpacity>
               </View>
+              {/* Avatar centrado debajo del logo si hay avatarUrl */}
+              {avatarUrl && (
+                <View style={styles.avatarContainer}>
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
             </View>
             {/* Formulario de login */}
             <View style={styles.loginSection}>
@@ -352,8 +448,37 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       'Iniciar Sesión'
                     )}
                   </Button>
-
-
+                  {biometricsEnabled && canUseBiometrics && biometricFailures.current >= 2 && (
+                    <TouchableOpacity
+                      style={styles.faceIdButton}
+                      onPress={async () => {
+                        try {
+                          const success = await authService.authenticateWithBiometrics();
+                          if (success) {
+                            const creds = await keychainService.getUserCredentials();
+                            if (creds && creds.username && creds.password) {
+                              setFormData({ user: creds.username, password: creds.password });
+                              setPendingAutoLogin(true);
+                              biometricFailures.current = 0;
+                              forceUpdate(n => n + 1);
+                            } else {
+                              Alert.alert('Error', 'No hay credenciales guardadas para Face ID.');
+                            }
+                          } else {
+                            biometricFailures.current += 1;
+                            forceUpdate(n => n + 1);
+                            Alert.alert('Face ID', 'No se pudo autenticar con Face ID.');
+                          }
+                        } catch (e) {
+                          biometricFailures.current += 1;
+                          forceUpdate(n => n + 1);
+                          Alert.alert('Face ID', 'Error al intentar Face ID.');
+                        }
+                      }}
+                    >
+                      <MaterialCommunityIcons name="face-recognition" size={28} color={theme.colors.primary.main} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -365,6 +490,32 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 };
 
 const styles = StyleSheet.create({
+  faceIdButton: {
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    borderWidth: 1,
+    borderColor: theme.colors.primary.main,
+    elevation: 2,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: theme.colors.primary.main,
+    backgroundColor: '#eee',
+  },
   container: {
     flex: 1,
     backgroundColor: '#2c3e50', // Color base más oscuro para contrastar con la imagen

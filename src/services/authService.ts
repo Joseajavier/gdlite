@@ -1,59 +1,77 @@
 // authService.ts
 
+
+
 import * as Keychain from 'react-native-keychain';
-import ReactNativeBiometrics from 'react-native-biometrics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Puedes añadir otros métodos según necesites para tu login, tokens, etc.
-
-// Comprueba si el dispositivo soporta biometría (Face ID o Touch ID)
-export async function canUseBiometrics(): Promise<boolean> {
-  try {
-    const supported = await Keychain.getSupportedBiometryType();
-    // Devuelve true si soporta algún tipo de biometría
-    return !!supported;
-  } catch (e) {
-    console.warn('[authService] Error comprobando biometría:', e);
-    return false;
-  }
-}
-
-// Lanza el prompt de Face ID / Touch ID usando react-native-biometrics
-export async function authenticateWithBiometrics(): Promise<boolean> {
-  try {
-    const rnBiometrics = new ReactNativeBiometrics();
-    const { available } = await rnBiometrics.isSensorAvailable();
-    if (!available) {
-      console.warn('[authService] No hay sensor biométrico disponible');
-      return false;
-    }
-    const { success } = await rnBiometrics.simplePrompt({ promptMessage: 'Autenticación necesaria para acceder' });
-    if (success) {
-      console.log('[authService] Prompt biométrico mostrado y autenticación OK');
-      return true;
-    } else {
-      console.warn('[authService] Prompt biométrico cancelado o fallido');
-      return false;
-    }
-  } catch (e) {
-    console.warn('[authService] Error usando biometría:', e);
-    return false;
-  }
-}
-
-// Ejemplo genérico para login normal (puedes adaptarlo a tu backend)
-export async function login(user: string, password: string): Promise<boolean> {
-  // Aquí tu lógica real de autenticación, por ejemplo contra una API REST
-  // Por ahora es solo un placeholder
-  if (user === 'admin' && password === 'admin') {
-    // Guardar credenciales en el Keychain si quieres login automático/biométrico
-    await Keychain.setGenericPassword(user, password);
-    return true;
-  }
-  return false;
+export interface AuthResponse {
+  token: string;
+  refreshToken?: string;
+  user: {
+    id: string;
+    username: string;
+    email?: string;
+    ImgUsuario?: string;
+    [key: string]: any;
+  };
 }
 
 export const authService = {
-  canUseBiometrics,
-  authenticateWithBiometrics,
-  login,
+  async login(username: string, password: string): Promise<AuthResponse> {
+    // Simulación de login, reemplaza con tu lógica real
+    if (username === 'admin' && password === 'admin') {
+      const user = { id: '1', username: 'admin', email: 'admin@demo.com' };
+      const token = 'demo-token';
+      await AsyncStorage.setItem('auth_token', token);
+      await AsyncStorage.setItem('auth_user', JSON.stringify(user));
+      return { token, user };
+    } else {
+      throw new Error('Credenciales incorrectas');
+    }
+  },
+
+  async logout(): Promise<void> {
+    await AsyncStorage.removeItem('auth_token');
+    await AsyncStorage.removeItem('auth_user');
+  },
+
+  async getCurrentUser(): Promise<AuthResponse['user'] | null> {
+    const userStr = await AsyncStorage.getItem('auth_user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+
+  async getToken(): Promise<string | null> {
+    return await AsyncStorage.getItem('auth_token');
+  },
+
+  async isAuthenticated(): Promise<boolean> {
+    const token = await this.getToken();
+    return !!token;
+  },
+
+  async canUseBiometrics(): Promise<boolean> {
+    try {
+      const biometryType = await Keychain.getSupportedBiometryType();
+      return !!biometryType;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async authenticateWithBiometrics(): Promise<boolean> {
+    try {
+      const result = await Keychain.getGenericPassword({
+        authenticationPrompt: {
+          title: 'Autenticación biométrica',
+          subtitle: 'Inicia sesión con Face ID/Touch ID',
+          description: 'Usa tu biometría para acceder',
+          cancel: 'Cancelar',
+        },
+      });
+      return !!(result && result.username && result.password);
+    } catch (e) {
+      return false;
+    }
+  },
 };

@@ -1,5 +1,4 @@
-require_relative '../node_modules/react-native-permissions/scripts/setup'
-
+source 'https://github.com/CocoaPods/Specs.git'
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -7,14 +6,14 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+require_relative '../node_modules/react-native-permissions/scripts/setup.rb'
+
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
+
+
+use_frameworks! :linkage => :static
 
 target 'gdlite' do
   use_frameworks! :linkage => :static
@@ -24,20 +23,42 @@ target 'gdlite' do
   config = use_native_modules!
   pod 'react-native-camera', :path => '../node_modules/react-native-camera'
 
-  # Eliminados pods de permisos innecesarios
-  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
+  # ======= PERMISOS NATIVOS PARA REACT-NATIVE-PERMISSIONS =======
+  permissions_path = '../node_modules/react-native-permissions/ios'
+
+
+  # (No declares manual pods for permission handlers; setup_permissions handles this)
+
+  # Llama a setup_permissions para que los handlers funcionen
+  setup_permissions([
+    'Camera',
+    'FaceID'
+  ])
+
+  # Añadir explícitamente los pods de PDF y WebView
+  pod 'react-native-pdf', :path => '../node_modules/react-native-pdf'
+  pod 'react-native-webview', :path => '../node_modules/react-native-webview'
+
+
   use_react_native!(
     :path => config[:reactNativePath],
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
-end
 
-# ✅ Mueve post_install fuera del target
-post_install do |installer|
-  react_native_post_install(
-    installer,
-    '../node_modules/react-native',
-    :mac_catalyst_enabled => false
-    # :ccache_enabled => true
-  )
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      # :ccache_enabled => true
+    )
+    # Solución para error non-modular-include-in-framework-module con RNReanimated
+    installer.pods_project.targets.each do |target|
+      if target.name == 'RNReanimated'
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        end
+      end
+    end
+  end
 end

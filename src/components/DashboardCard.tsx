@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, TextStyle, StyleProp } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Typography } from './Typography';
-
 interface DashboardCardProps {
   title: string;
   subtitle: string;
@@ -11,6 +10,13 @@ interface DashboardCardProps {
   onPress?: () => void;
   infoIcon?: string;
   infoText?: string;
+  left?: React.ReactNode;
+  footer?: React.ReactNode;
+  cardStyle?: any;
+  titleStyle?: StyleProp<TextStyle>;
+  subtitleStyle?: StyleProp<TextStyle>;
+  infoTextStyle?: StyleProp<TextStyle>;
+  infoIconColor?: string;
 }
 
 const DashboardCard: React.FC<DashboardCardProps> = ({
@@ -18,25 +24,52 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   subtitle,
   icon,
   gifSource,
+  // onPress, // removed to fix unused variable error
   infoIcon,
   infoText,
+  left,
+  footer,
+  cardStyle,
+  titleStyle,
+  subtitleStyle,
+  infoTextStyle,
+  infoIconColor,
 }) => {
   return (
-    <View style={styles.modernCard}>
-      <View style={gifSource ? styles.gifSection : styles.cardIconSection}>
-        {gifSource ? (
-          <Image source={gifSource} style={{ width: 90, height: 90 }} resizeMode="contain" />
-        ) : icon ? (
-          <MaterialIcons name={icon} size={32} color="#444" />
-        ) : null}
-      </View>
-      <View style={styles.cardContentSection}>
-        <Typography variant="h4" style={styles.cardTitle}>{title}</Typography>
-        <View style={styles.cardInfoRow}>
-          {infoIcon && <MaterialIcons name={infoIcon} size={18} color="#444" style={styles.cardInfoIcon} />}
-          <Typography variant="body2" style={styles.cardInfoText}>{infoText}</Typography>
+    <View style={[styles.modernCard, cardStyle]}>
+      {footer && <View style={styles.cardFooterAbsolute}>{footer}</View>}
+      {left ? (
+        <View style={styles.cardIconSection}>{left}</View>
+      ) : (
+        <View style={gifSource ? styles.gifSection : styles.cardIconSection}>
+          {gifSource ? (
+            <Image source={gifSource} style={styles.gifImage} resizeMode="contain" />
+          ) : (typeof icon === 'string' ? (
+            <MaterialIcons name={icon} size={32} color="#444" />
+          ) : null)}
         </View>
-        <Typography variant="body2" style={styles.cardSubtitle}>{subtitle}</Typography>
+      )}
+      <View style={styles.cardContentSection}>
+        <Typography
+          variant="h4"
+          style={StyleSheet.flatten([styles.cardTitle, titleStyle])}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title}
+        </Typography>
+        <View style={styles.cardInfoRow}>
+          {infoIcon && <MaterialIcons name={infoIcon} size={18} color={infoIconColor || "#444"} style={styles.cardInfoIcon} />}
+          <Typography variant="body2" style={StyleSheet.flatten([styles.cardInfoText, infoTextStyle])}>{infoText}</Typography>
+        </View>
+        <Typography
+          variant="body2"
+          style={StyleSheet.flatten([styles.cardSubtitle, subtitleStyle])}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {subtitle}
+        </Typography>
       </View>
     </View>
   );
@@ -46,17 +79,20 @@ const styles = StyleSheet.create({
   modernCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
     minHeight: 130,
     padding: 14,
     borderRadius: 24,
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
-    elevation: 10,
-    marginVertical: 8,
-    marginHorizontal: 8,
+    borderWidth: 2,
+    borderColor: '#666CFF',
+    shadowColor: '#666CFF',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 16,
+    marginVertical: 12,
+    marginHorizontal: 0,
     overflow: 'hidden',
   },
   cardIconSection: {
@@ -100,11 +136,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 18,
     letterSpacing: 1.2,
+    maxWidth: 220,
   },
   cardSubtitle: {
     color: '#444',
     fontSize: 12,
     marginTop: 2,
+    maxWidth: 220,
+  },
+  gifImage: {
+    width: 90,
+    height: 90,
+  },
+  cardFooterAbsolute: {
+    position: 'absolute',
+    top: 8,
+    right: 10,
+    zIndex: 2,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 8,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
 

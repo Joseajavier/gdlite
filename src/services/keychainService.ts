@@ -11,9 +11,9 @@ const BIOMETRICS_KEY = 'biometricsEnabled';
 
 // Interfaz para los datos de configuración de la app
 export interface AppConfigData {
-  apiBaseUrl: string;
-  userId: string;
-  token: string;
+  apiBaseUrl?: string;
+  userId?: string;
+  token?: string;
   refreshToken?: string;
   organizationId?: string;
   clientId?: string;
@@ -21,6 +21,14 @@ export interface AppConfigData {
   environment?: 'production' | 'staging' | 'development';
   expiresAt?: string; // ISO string
   lastLoginDate?: string;
+  // Campos originales del QR
+  TokenAplicacion?: string;
+  IdUsuario?: string;
+  NombreUsuario?: string;
+  NombreCompleto?: string;
+  ImgUsuario?: string;
+  ColorPrimario?: string;
+  UrlSwagger?: string;
 }
 
 // Interfaz para credenciales de usuario
@@ -31,6 +39,38 @@ export interface UserCredentials {
 
 class KeychainService {
   /**
+   * Flag to prevent auto Face ID login after logout
+   */
+  async setJustLoggedOut(value: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem('justLoggedOut', value ? 'true' : 'false');
+    } catch (e) {
+      console.error('Error setting justLoggedOut flag:', e);
+    }
+  }
+
+  async getJustLoggedOut(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem('justLoggedOut');
+      return value === 'true';
+    } catch (e) {
+      console.error('Error reading justLoggedOut flag:', e);
+      return false;
+    }
+  }
+  /**
+   * Limpia solo las credenciales de usuario
+   */
+  async clearUserCredentials(): Promise<boolean> {
+    try {
+      await Keychain.resetInternetCredentials({ server: KEYCHAIN_KEYS.USER_CREDENTIALS });
+      return true;
+    } catch (error) {
+      console.error('Error clearing user credentials from keychain:', error);
+      return false;
+    }
+  }
+  /**
    * Guarda credenciales de usuario en el Keychain genérico (para biometría)
    */
   async saveGenericCredentials(credentials: UserCredentials): Promise<boolean> {
@@ -39,7 +79,8 @@ class KeychainService {
         credentials.username,
         credentials.password,
         {
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY
         }
       );
       return true;
@@ -49,11 +90,14 @@ class KeychainService {
     }
   }
   /**
-   * Guarda la configuración de la app en el keychain
+   * Guarda la configuración de la app en el keychain (guarda el objeto original del QR)
    */
-  async saveAppConfig(config: AppConfigData): Promise<boolean> {
+  async saveAppConfig(config: any): Promise<boolean> {
     try {
-      const configString = JSON.stringify(config);
+      // Si el objeto tiene un campo __originalQR, guardar ese, si no, guardar el objeto tal cual
+      const original = config && config.__originalQR ? config.__originalQR : config;
+      const configString = JSON.stringify(original);
+      console.log('[KeychainService][TRACE] Guardando config en keychain:', original);
       await Keychain.setInternetCredentials(
         KEYCHAIN_KEYS.APP_CONFIG,
         'app_config',
@@ -77,8 +121,10 @@ class KeychainService {
       const credentials = await Keychain.getInternetCredentials(KEYCHAIN_KEYS.APP_CONFIG);
       if (credentials && credentials.password) {
         const config = JSON.parse(credentials.password) as AppConfigData;
+        console.log('[KeychainService][TRACE] Leyendo config del keychain:', config);
         return config;
       }
+      console.log('[KeychainService][TRACE] No se encontró config en keychain.');
       return null;
     } catch (error) {
       console.error('Error reading app config from keychain:', error);
@@ -101,17 +147,15 @@ class KeychainService {
   }
 
   /**
-   * Valida que la configuración tenga los campos mínimos requeridos
+   * Valida que la configuración tenga los campos mínimos requeridos y que provenga de un QR válido.
+   * Solo son obligatorios: TokenAplicacion, NombreUsuario y UrlSwagger.
    */
   validateAppConfig(config: any): config is AppConfigData {
     return (
       config &&
-      typeof config.apiBaseUrl === 'string' &&
-      typeof config.userId === 'string' &&
-      typeof config.token === 'string' &&
-      config.apiBaseUrl.trim() !== '' &&
-      config.userId.trim() !== '' &&
-      config.token.trim() !== ''
+      typeof config.TokenAplicacion === 'string' && config.TokenAplicacion.trim() !== '' &&
+      typeof config.NombreUsuario === 'string' && config.NombreUsuario.trim() !== '' &&
+      typeof config.UrlSwagger === 'string' && config.UrlSwagger.trim() !== ''
     );
   }
 

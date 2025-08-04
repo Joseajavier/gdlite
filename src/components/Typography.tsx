@@ -8,6 +8,8 @@ interface TypographyProps {
   align?: 'left' | 'center' | 'right';
   children: React.ReactNode;
   style?: TextStyle;
+  numberOfLines?: number;
+  ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
 }
 
 export const Typography: React.FC<TypographyProps> = ({
@@ -16,6 +18,8 @@ export const Typography: React.FC<TypographyProps> = ({
   align = 'left',
   children,
   style,
+  numberOfLines,
+  ellipsizeMode,
 }) => {
   const getTextStyle = (): TextStyle => {
     const baseStyle = theme.typography[variant];
@@ -45,7 +49,11 @@ export const Typography: React.FC<TypographyProps> = ({
   };
 
   return (
-    <Text style={[getTextStyle(), style]}>
+    <Text
+      style={[getTextStyle(), style]}
+      numberOfLines={numberOfLines}
+      ellipsizeMode={ellipsizeMode}
+    >
       {children}
     </Text>
   );

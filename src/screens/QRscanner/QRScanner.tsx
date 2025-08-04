@@ -1,32 +1,313 @@
-import React from 'react';
-import QRCodeScanner from 'react-native-qrcode-scanner';
-import { Text, View, StyleSheet } from 'react-native';
-import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import { Platform } from 'react-native';
-import { useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Animated, Easing, Platform, SafeAreaView, View, Alert, StyleSheet, Text } from 'react-native';
+import { Typography } from '../../components/Typography';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { theme } from '../../styles/theme';
+import { check, request, PERMISSIONS, RESULTS, openSettings } from 'react-native-permissions';
+import { keychainService, AppConfigData } from '../../services/keychainService';
+import { validateQRData } from '../../utils/qrValidators';
+import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
-const QRScanner = () => {
-  const onSuccess = (e: { data: string }) => {
-    console.log('QR leído:', e.data);
+interface QRScannerProps {
+  onScanSuccess?: (data: AppConfigData) => void;
+  onScanCancel?: () => void;
+}
+
+const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onScanCancel }) => {
+  const [checkingConfig, setCheckingConfig] = useState(true);
+  const [hasConfig, setHasConfig] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanned, setScanned] = useState(false);
+
+  // Comprobar si es la primera ejecución tras instalar y limpiar datos si es necesario
+  useEffect(() => {
+    const checkFirstRunAndConfig = async () => {
+      try {
+        const firstRunFlag = await AsyncStorage.getItem('firstRunFlag');
+        if (!firstRunFlag) {
+          // Primera ejecución tras instalar: limpiar todo
+          console.log('[QRScanner] Primera ejecución tras instalar. Limpiando datos...');
+          await keychainService.clearAppConfig?.();
+          await keychainService.clearUserCredentials?.();
+          // Si usas StorageManager, limpia también:
+          try {
+            const storage = await import('../../utils/storage');
+            await storage.StorageManager.clearAppConfig?.();
+          } catch (e) { /* ignorar si no existe */ }
+          // Limpiar absolutamente todo AsyncStorage
+          await AsyncStorage.clear();
+          await AsyncStorage.setItem('firstRunFlag', 'true');
+        }
+        // Ahora comprobar si hay config guardada
+        const config = await keychainService.getAppConfig();
+        if (config) {
+          if (onScanSuccess) onScanSuccess(config);
+          setHasConfig(true);
+        }
+      } catch (error) {
+        console.error('[QRScanner] Error comprobando config guardada o limpiando:', error);
+      }
+      setCheckingConfig(false);
+    };
+    checkFirstRunAndConfig();
+  }, [onScanSuccess]);
+
+  // Animación línea de escaneo
+  const scanLineAnim = React.useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    let isMounted = true;
+    const animateLine = () => {
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 1600,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        if (isMounted) animateLine();
+      });
+    };
+    animateLine();
+    return () => { isMounted = false; };
+  }, [scanLineAnim]);
+
+  // Guardar los datos escaneados y lanzar el flujo normal
+  const saveScannedData = async (qrData: any) => {
+    try {
+      console.log('[QRScanner] Datos QR recibidos:', qrData);
+      // Guardar el objeto QR original, no el transformado
+      const savedKeychain = await keychainService.saveAppConfig(qrData);
+      await import('../../utils/storage').then(m => m.StorageManager.saveAppConfig(qrData));
+      // Limpiar credenciales de usuario para evitar password relleno tras escanear QR
+      await keychainService.clearUserCredentials();
+      // Forzar recarga de configuración tras guardar
+      setHasConfig(false); // Para que el useEffect de Login vuelva a leer
+      if (!savedKeychain) {
+        Alert.alert('Error', 'No se pudo guardar la configuración');
+        return;
+      }
+      completeConfiguration(qrData);
+    } catch (error) {
+      console.error('[QRScanner] Error saving scanned data:', error);
+      Alert.alert('Error', 'No se pudo guardar la configuración');
+    }
   };
-useEffect(() => {
-  const askPermission = async () => {
-    const result = await request(
-      Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA
+
+  // Finaliza la configuración y llama al callback de éxito
+  const completeConfiguration = (appConfig: AppConfigData) => {
+    if (onScanSuccess) onScanSuccess(appConfig);
+  };
+
+  // Obtener la cámara trasera
+  const devices = useCameraDevice('back');
+  const device = devices;  // Usamos el dispositivo 'back' directamente
+
+  // Pedir permiso de cámara
+  const requestCameraPermission = useCallback(async () => {
+    try {
+      const permission = Platform.OS === 'ios'
+        ? PERMISSIONS.IOS.CAMERA
+        : PERMISSIONS.ANDROID.CAMERA;
+      let status = await check(permission);
+      if (status === RESULTS.GRANTED) {
+        setHasPermission(true);
+        return;
+      }
+      if (status === RESULTS.BLOCKED) {
+        setHasPermission(false);
+        Alert.alert(
+          'Permiso de Cámara',
+          'El acceso a la cámara está bloqueado. Debes habilitarlo manualmente en los ajustes del dispositivo.',
+          [
+            { text: 'Abrir Ajustes', onPress: () => openSettings() },
+            { text: 'Cancelar', style: 'cancel', onPress: onScanCancel }
+          ]
+        );
+        return;
+      }
+      const result = await request(permission);
+      if (result === RESULTS.GRANTED) {
+        setHasPermission(true);
+      } else {
+        setHasPermission(false);
+        Alert.alert(
+          'Permiso de Cámara',
+          'No has concedido permiso de cámara. Para usar el escáner QR, habilítalo en los ajustes del dispositivo.',
+          [
+            { text: 'Abrir Ajustes', onPress: () => openSettings() },
+            { text: 'Cancelar', style: 'cancel', onPress: onScanCancel }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('[QRScanner] Error comprobando/solicitando permiso de cámara:', error);
+      setHasPermission(false);
+      Alert.alert('Error', 'No se pudo comprobar el permiso de cámara.');
+    }
+  }, [onScanCancel]);
+
+  useEffect(() => {
+    requestCameraPermission();
+  }, [requestCameraPermission]);
+
+  // Escaneo automático de QR en iOS y Android
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: codes => {
+      console.log('QR Escaneado: ', codes);
+      if (codes.length > 0 && !scanned) {
+        console.log('Código QR detectado:', codes[0].value);
+        setScanned(true);
+        handleQRCodeScanned({ data: codes[0].value });
+      }
+    }
+  });
+
+  // Lógica para manejar el escaneo del QR
+  const handleQRCodeScanned = async (scanResult: any) => {
+    const data = scanResult?.data;
+    console.log('Datos escaneados:', data);  // Verifica qué datos se han obtenido
+    try {
+      const validationResult = validateQRData(data);
+      if (!validationResult.isValid) {
+        console.log('QR no válido:', validationResult.errors);  // Log de errores si el QR no es válido
+        setTimeout(() => setScanned(false), 500);
+        Alert.alert(
+          'QR Inválido',
+          `El código QR no es válido:\n\n${validationResult.errors.join('\n')}`,
+          [{ text: 'OK', onPress: () => setScanned(false) }]
+        );
+        return;
+      }
+      const qrData = validationResult.data!;
+      // Guarda directamente sin mostrar resumen
+      saveScannedData(qrData);
+    } catch (error) {
+      console.error('[QRScanner] Error parsing QR data:', error);
+      setTimeout(() => setScanned(false), 500);
+      Alert.alert('Error', 'No se pudo procesar el código QR. Asegúrate de que contiene datos válidos.', [{ text: 'OK', onPress: () => setScanned(false) }]);
+    }
+  };
+
+  // Renderizar según permisos y estados
+  if (hasConfig) return null;
+  if (checkingConfig) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.cameraContainer}>
+          <Typography variant="body1" style={styles.overlayText}>Comprobando configuración...</Typography>
+        </View>
+      </SafeAreaView>
     );
-    console.log('🔍 Permiso de cámara:', result);
-  };
-  askPermission();
-}, []);
+  }
+  if (!hasPermission || !device) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.cameraContainer}>
+          <View style={styles.overlayCenter}>
+            <Card style={styles.scannerCard}>
+              <Typography variant="h3" style={styles.errorTitle}>
+                Permiso denegado
+              </Typography>
+              <Typography variant="body1" style={styles.errorDescription}>
+                No has concedido permiso de cámara o no se detecta la cámara del dispositivo. Para usar el escáner QR, habilítalo en los ajustes del dispositivo y asegúrate de que la cámara funciona correctamente.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                onPress={() => openSettings()}
+                style={styles.errorButton}
+              >
+                Abrir Ajustes
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onPress={onScanCancel}
+                style={styles.errorButtonSecondary}
+              >
+                Cancelar
+              </Button>
+            </Card>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Render principal de cámara y overlay
   return (
-    <View style={styles.container}>
-      <QRCodeScanner
-        onRead={onSuccess}
-        showMarker
-        reactivate
-        topContent={<Text style={styles.text}>Escanea el código QR</Text>}
-      />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.cameraContainer}>
+        <Camera
+          style={styles.cameraBackground}
+          device={device}
+          isActive={true}
+          codeScanner={codeScanner} // Solo iOS: escaneo automático
+        />
+        <View style={styles.overlayCenter}>
+          <View style={styles.topCardContainer}>
+            <Card style={styles.scannerCard}>
+              <Typography variant="h3" style={styles.title}>
+                Escanear Código QR
+              </Typography>
+              <Typography variant="body1" style={styles.description}>
+                Apunta la cámara hacia el código QR que contiene los datos de configuración.
+              </Typography>
+            </Card>
+          </View>
+          <View style={styles.focusFrameContainer}>
+            <View style={styles.focusFrame}>
+              <Animated.View
+                style={[
+                  styles.scanLine,
+                  {
+                    transform: [
+                      {
+                        translateY: scanLineAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [8, 220 - 8],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            </View>
+          </View>
+          {/* Botón test para lanzar flujo de guardado manualmente */}
+          <View style={styles.testIconContainer}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onPress={() => handleQRCodeScanned({
+                data: JSON.stringify({
+                  TokenAplicacion: '002D7ED9FB845C41B2E4A28F6A041460',
+                  IdUsuario: '1',
+                  NombreCompleto: 'ADD4U ',
+                  NombreUsuario: 'add4u',
+                  ImgUsuario: 'https://add4ux.s3.amazonaws.com/public/imagenes/DC46F4C8B087C14FA18D796748A0F210.com/public/images/4EE393F36705E04FBE7248D8B2055803jpeg',
+                  UrlSwagger: 'http://gestdocj.add4u/GestDocX/ltsrv/',
+                  ColorPrimario: 'primary',
+                })
+              })}
+              style={styles.testIconButton}
+            >
+              <Text style={styles.testIconEmoji}>🧪</Text>
+            </Button>
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
 

@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAvisos } from '../../context/AvisosContext';
+import { usePendingSignatures } from '../../context/PendingSignaturesContext';
+import { useSession } from '../../context/SessionContext';
+import { StorageManager } from '../../utils/storage';
 import {
   View,
   StyleSheet,
   SafeAreaView,
-  StatusBar,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Image
+  Alert
 } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import UserMenuFull from '../../components/UserMenuFull';
 import Navbar from '../../components/Navbar';
 import DashboardCard from '../../components/DashboardCard';
-import { Typography } from '../../components/Typography';
+import ConfigModal from '../../components/ConfigModal';
 import { theme } from '../../styles/theme';
+
 
 
 interface HomeScreenProps {
@@ -23,19 +27,115 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetConfig: _onResetConfig }) => {
-  const handleShowConfig = async () => {
-    try {
-      const { keychainService } = await import('../../services/keychainService');
-      const config = await keychainService.getAppConfig();
-      console.log('[Config] Datos guardados:', config);
-      Alert.alert(
-        'Configuración guardada',
-        config ? JSON.stringify(config, null, 2) : 'No hay configuración guardada'
-      );
-    } catch (error) {
-      console.error('[Config] Error al obtener configuración:', error);
-      Alert.alert('Error', 'No se pudo obtener la configuración');
+  const { token } = useSession();
+  // Estado para el número de firmas pendientes
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const { setPendingSignatures } = usePendingSignatures();
+  const { avisos, setAvisos } = useAvisos();
+  const [loadingAvisos, setLoadingAvisos] = useState(false);
+  const [loadingPending, setLoadingPending] = useState(false);
+
+  // Llama al backend para obtener firmas pendientes y avisos usando POST
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoadingPending(true);
+      setLoadingAvisos(true);
+      try {
+        if (!token) return;
+        const config = await StorageManager.getAppConfig();
+        if (!config || !(config as any).UrlSwagger) throw new Error('No se encontró la URL base en la configuración');
+        let baseUrl = (config as any).UrlSwagger;
+        if (!baseUrl.endsWith('/')) baseUrl += '/';
+        const url = `${baseUrl}avisos/getAvisos`;
+
+        // Firmas pendientes
+        const bodyFirmas = {
+          token,
+          reader: "0",
+          deleted: "0",
+          document: "1"
+        };
+        const responseFirmas = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyFirmas)
+        });
+        let dataFirmas;
+        try {
+          dataFirmas = await responseFirmas.json();
+        } catch (e) {
+          dataFirmas = null;
+        }
+        if (!responseFirmas.ok) throw new Error('Error al obtener firmas pendientes');
+        if (dataFirmas && Array.isArray(dataFirmas.avisos)) {
+          setPendingCount(dataFirmas.avisos.length);
+          setPendingSignatures(dataFirmas.avisos);
+          console.log('FIRMAS:', JSON.stringify(dataFirmas.avisos, null, 2));
+        } else {
+          setPendingCount(0);
+          setPendingSignatures([]);
+        }
+
+        // Avisos
+        const bodyAvisos = {
+          token,
+          reader: "0",
+          deleted: "0",
+          document: "0"
+        };
+        const responseAvisos = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyAvisos)
+        });
+        let dataAvisos;
+        try {
+          dataAvisos = await responseAvisos.json();
+        } catch (e) {
+          dataAvisos = null;
+        }
+        if (!responseAvisos.ok) throw new Error('Error al obtener avisos');
+        if (dataAvisos && Array.isArray(dataAvisos.avisos)) {
+          setAvisos(dataAvisos.avisos);
+        } else {
+          setAvisos([]);
+        }
+      } catch (err) {
+        setPendingCount(null);
+        setPendingSignatures([]);
+        setAvisos([]);
+        console.error('Error fetching firmas/avisos:', err);
+      } finally {
+        setLoadingPending(false);
+        setLoadingAvisos(false);
+      }
+    };
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configData, setConfigData] = useState<any>(null);
+
+  // Recarga la configuración cada vez que el modal se abre
+  // Recarga la configuración cada vez que el modal se abre
+  useEffect(() => {
+    if (showConfigModal) {
+      (async () => {
+        try {
+          const config = await StorageManager.getAppConfig();
+          setConfigData(config);
+        } catch (error) {
+          console.error('[Config] Error al obtener configuración:', error);
+          Alert.alert('Error', 'No se pudo obtener la configuración');
+        }
+      })();
+    } else {
+      setConfigData(null); // Limpia los datos al cerrar el modal
     }
+  }, [showConfigModal]);
+
+  const handleShowConfig = () => {
+    setShowConfigModal(true);
   };
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -45,6 +145,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   };
   
   const handlePortadirmas = () => {
+    // Al navegar a portafirmas
     onNavigate?.('portafirmas');
   };
 
@@ -57,7 +158,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   };
 
   const handleIA = () => {
-    // IA en desarrollo
+    onNavigate?.('ia');
   };
 
   const handleLogout = () => {
@@ -89,45 +190,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
   return (
     <SafeAreaView style={styles.container}>
       <Navbar onUserMenuToggle={handleUserMenuToggle} />
-      {/* User Menu Dropdown y fondo para cerrar */}
-      {showUserMenu && (
-        <>
-          <TouchableOpacity
-            style={styles.overlayAbsolute}
-            activeOpacity={1}
-            onPress={() => setShowUserMenu(false)}
-          />
-          <View style={styles.userMenuContainer}>
-            <View style={styles.userMenu}>
-              <View style={styles.userMenuHeader}>
-                <MaterialIcons name="person" size={22} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Usuario</Typography>
-              </View>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('profile')}>
-                <MaterialIcons name="person" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Mi Perfil</Typography>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('settings')}>
-                <MaterialIcons name="settings" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Configuración</Typography>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('showConfig')}>
-                <MaterialIcons name="info" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Ver configuración</Typography>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('resetConfig')}>
-                <MaterialIcons name="delete" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Borrar configuración</Typography>
-              </TouchableOpacity>
-              <View style={styles.menuDivider} />
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('logout')}>
-                <MaterialIcons name="logout" size={20} color="#666CFF" style={styles.menuIcon} />
-                <Typography style={styles.menuText}>Cerrar Sesión</Typography>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </>
-      )}
+      {/* Modal legible de configuración (reutilizable) */}
+      <ConfigModal
+        visible={showConfigModal}
+        configData={configData}
+        onClose={() => setShowConfigModal(false)}
+      />
+      {/* User Menu Dropdown y fondo para cerrar (componente reutilizable) */}
+      <UserMenuFull
+        visible={showUserMenu}
+        onClose={() => setShowUserMenu(false)}
+        onOption={handleMenuOption}
+        styles={styles}
+      />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.cardsContainer}>
           <TouchableOpacity style={styles.cardTouchable} onPress={handlePortadirmas} activeOpacity={0.9}>
@@ -136,7 +211,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
               subtitle="Accede a tus documentos para firmar"
               gifSource={require('../../assets/images/firma-unscreen.gif')}
               infoIcon="pending-actions"
-              infoText="Firmas pendientes: 5"
+              infoText={
+                loadingPending
+                  ? 'Firmas pendientes: ...'
+                  : pendingCount === null
+                    ? 'Firmas pendientes: ?'
+                    : `Firmas pendientes: ${pendingCount}`
+              }
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.cardTouchable} onPress={handleAvisos} activeOpacity={0.9}>
@@ -145,7 +226,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
               subtitle="Consulta tus notificaciones importantes"
               gifSource={require('../../assets/images/notificacion-unscreen.gif')}
               infoIcon="notification-important"
-              infoText="Nuevos avisos: 3"
+              infoText={
+                loadingAvisos
+                  ? 'Nuevos avisos: ...'
+                  : avisos && Array.isArray(avisos)
+                    ? `Nuevos avisos: ${avisos.length}`
+                    : 'Nuevos avisos: ?'
+              }
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.cardTouchable} onPress={handleCalendario} activeOpacity={0.9}>
@@ -171,6 +258,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout, onNavigate, onResetCo
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
