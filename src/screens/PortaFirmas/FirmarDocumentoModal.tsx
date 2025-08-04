@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, StyleSheet, TextInput, TouchableOpacity, Text } from 'react-native';
+import { Modal, View, StyleSheet, TextInput, TouchableOpacity, Text, Pressable } from 'react-native';
 import { theme } from '../../styles/theme';
 
 interface FirmarDocumentoModalProps {
@@ -16,8 +16,8 @@ const FirmarDocumentoModal: React.FC<FirmarDocumentoModalProps> = ({ visible, on
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalContent}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Firmar Documento</Text>
           <Text style={styles.label}>Seleccione certificado*</Text>
           <View style={styles.selectBox}>
@@ -50,8 +50,8 @@ const FirmarDocumentoModal: React.FC<FirmarDocumentoModalProps> = ({ visible, on
               <Text style={styles.cancelarBtnText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 };
@@ -65,10 +65,10 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 28,
-    width: 380,
-    maxWidth: '95%',
+    borderRadius: 14, // Reducido de 16 a 14
+    padding: 20, // Reducido de 28 a 20
+    width: 340, // Reducido de 380 a 340
+    maxWidth: '90%', // Reducido de 95% a 90%
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -77,15 +77,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 22, // Reducido de 28 a 22
     fontWeight: '700',
     color: theme.colors.text.primary,
-    marginBottom: 18,
+    marginBottom: 14, // Reducido de 18 a 14
     textAlign: 'center',
   },
   label: {
     color: theme.colors.primary.main,
-    fontSize: 15,
+    fontSize: 13, // Reducido de 15 a 13
     marginBottom: 2,
     alignSelf: 'flex-start',
     marginLeft: 2,
@@ -93,48 +93,48 @@ const styles = StyleSheet.create({
   selectBox: {
     borderWidth: 2,
     borderColor: theme.colors.primary.main,
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 6, // Reducido de 8 a 6
+    marginBottom: 12, // Reducido de 16 a 12
     width: '100%',
   },
   input: {
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 14,
-    width: 300,
-    fontSize: 16,
+    borderRadius: 6, // Reducido de 8 a 6
+    padding: 10, // Reducido de 12 a 10
+    marginBottom: 12, // Reducido de 14 a 12
+    width: 280, // Reducido de 300 a 280
+    fontSize: 14, // Reducido de 16 a 14
     backgroundColor: '#fafbff',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '100%',
-    marginTop: 10,
+    marginTop: 8, // Reducido de 10 a 8
   },
   firmarBtn: {
     backgroundColor: theme.colors.primary.main,
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    marginRight: 12,
+    borderRadius: 6, // Reducido de 8 a 6
+    paddingVertical: 10, // Reducido de 12 a 10
+    paddingHorizontal: 24, // Reducido de 32 a 24
+    marginRight: 10, // Reducido de 12 a 10
   },
   firmarBtnText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 16, // Reducido de 18 a 16
   },
   cancelarBtn: {
     backgroundColor: '#f5f5ff',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    borderRadius: 6, // Reducido de 8 a 6
+    paddingVertical: 10, // Reducido de 12 a 10
+    paddingHorizontal: 24, // Reducido de 32 a 24
   },
   cancelarBtnText: {
     color: theme.colors.primary.main,
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 16, // Reducido de 18 a 16
   },
 });
 

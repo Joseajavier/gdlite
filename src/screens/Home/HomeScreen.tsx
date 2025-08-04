@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 16,
+    padding: 12, // Reducido de 16 a 12
   },
   gradientNavbar: {
     backgroundColor: 'linear-gradient(90deg, #666CFF 0%, #5F5FFF 100%)',
@@ -291,8 +291,8 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     flex: 1,
-    gap: 8,
-    paddingVertical: 4,
+    gap: 6, // Reducido de 8 a 6
+    paddingVertical: 2, // Reducido de 4 a 2
   },
   cardTouchable: {
     flex: 1,

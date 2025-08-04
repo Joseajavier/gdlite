@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import FirmarDocumentoModal from './FirmarDocumentoModal';
 import RechazarFirmaModal from './RechazarFirmaModal';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert, Image, TextInput } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -24,9 +24,31 @@ const Portafirmas = () => {
   const [showFirmarModal, setShowFirmarModal] = useState(false);
   const [showRechazarModal, setShowRechazarModal] = useState(false);
   const [firmaActual, setFirmaActual] = useState<any>(null);
+  const [searchText, setSearchText] = useState('');
   const navigation = useNavigation<NavigationProp<any>>();
 
   const handleUserMenuToggle = () => setShowUserMenu((v) => !v);
+
+  // Función para filtrar firmas basado en el texto de búsqueda
+  const filteredSignatures = pendingSignatures?.filter((item: any) => {
+    if (!searchText.trim()) return true;
+    
+    const searchLower = searchText.toLowerCase();
+    const searchFields = [
+      item?.nombreUsuario,
+      item?.puestoTrabajo,
+      item?.puesto,
+      item?.comentario,
+      item?.documento,
+      item?.asunto,
+      // Convertir fecha a string si existe
+      item?.fecha || item?.Fecha || item?.fechaCreacion,
+    ];
+    
+    return searchFields.some(field => 
+      field && field.toString().toLowerCase().includes(searchLower)
+    );
+  }) || [];
 
   const handleMenuOption = (option: any) => {
     // Manejo de opciones del menú de usuario
@@ -65,29 +87,51 @@ const Portafirmas = () => {
   );
 
   const renderFirma = ({ item }: { item: any }) => {
-    // Se eliminó la variable fechaCorta y el cálculo de fecha
+    // Calcular fecha corta
+    let fechaCorta = '';
+    const rawFecha = item?.fecha || item?.Fecha || item?.fechaCreacion;
+    if (rawFecha) {
+      const pad = (n: number) => (n < 10 ? `0${n}` : n);
+      const d = new Date(rawFecha);
+      if (!isNaN(d.getTime())) {
+        const yearShort = d.getFullYear().toString().slice(-2);
+        fechaCorta = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${yearShort} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } else {
+        fechaCorta = rawFecha;
+      }
+    } else {
+      fechaCorta = '-';
+    }
 
     const comment = item?.comentario?.trim() ? item.comentario : 'Sin comentario';
+    
+    const handleCardPress = () => {
+      navigation.navigate('DetalleFirma', {
+        documento: comment,
+        idDocumento: item?.idDocumento || item?.id || item?.Id
+      });
+    };
+
     return (
       <Swipeable
         renderRightActions={(prog, dragX) => renderRightActions(prog, dragX, item)}
         overshootRight={false}
         rightThreshold={BUTTON_WIDTH}
       >
-        <View style={styles.swipeContainer}>
+        <TouchableOpacity style={styles.swipeContainer} onPress={handleCardPress} activeOpacity={0.7}>
           <View style={styles.mailCard}>
             {/* Icono de deslizamiento en la esquina superior derecha */}
             <View style={styles.swipeHintIconContainer}>
-              <MaterialIcons name="swipe" size={22} color="#bbb" />
+              <MaterialIcons name="swipe" size={20} color="#bbb" /> {/* Reducido de 22 a 20 */}
             </View>
             <View style={styles.mailHeaderRow}>
               <View style={styles.rowAlignCenterFlex1}>
-                <Avatar src={item?.ImgUsuario} size={44} style={styles.avatarMargin} />
+                <Avatar src={item?.ImgUsuario} size={40} style={styles.avatarMargin} /> {/* Reducido de 44 a 40 */}
                 <View style={styles.flex1}>
-                  <Typography style={styles.mailSenderText}>
+                  <Typography style={styles.mailSenderText} numberOfLines={1} ellipsizeMode="tail">
                     Documento enviado por: {item?.nombreUsuario || 'Sin usuario'}
                   </Typography>
-                  <Typography style={styles.mailJobText}>
+                  <Typography style={styles.mailJobText} numberOfLines={1} ellipsizeMode="tail">
                     {item?.puestoTrabajo || item?.puesto || 'Sin puesto'}
                   </Typography>
                 </View>
@@ -95,10 +139,15 @@ const Portafirmas = () => {
             </View>
 
             <View style={styles.mailSubjectRow}>
-              <Typography style={styles.mailSubjectText}>{comment}</Typography>
+              <Typography style={styles.mailSubjectText} numberOfLines={2} ellipsizeMode="tail">{comment}</Typography>
+            </View>
+
+            <View style={styles.mailActionsRowNoBorder}>
+              <View style={styles.flex1} />
+              <Typography style={styles.mailDateText}>{fechaCorta || 'Sin fecha'}</Typography>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Swipeable>
     );
   };
@@ -142,16 +191,37 @@ const Portafirmas = () => {
           styles={styles}
         />
         <View style={styles.content}>
+          {/* Buscador */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar en portafirmas..."
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholderTextColor="#999"
+              />
+              {searchText.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
+                  <MaterialIcons name="clear" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
           <View style={styles.contentArea}>
-            {pendingSignatures?.length ? (
+            {filteredSignatures?.length ? (
               <FlatList
-                data={pendingSignatures}
+                data={filteredSignatures}
                 keyExtractor={(it, ix) => it.Id?.toString() || it.id?.toString() || ix.toString()}
                 renderItem={renderFirma}
                 contentContainerStyle={styles.firmasListContent}
               />
             ) : (
-              <Typography style={styles.noFirmasText}>No tienes firmas pendientes.</Typography>
+              <Typography style={styles.noFirmasText}>
+                {searchText.trim() ? 'No se encontraron firmas que coincidan con la búsqueda' : 'No tienes firmas pendientes.'}
+              </Typography>
             )}
           </View>
         </View>
@@ -188,16 +258,16 @@ const Portafirmas = () => {
 const styles = StyleSheet.create({
   swipeHintIconContainer: {
     position: 'absolute',
-    top: 8,
-    right: 10,
+    top: 6, // Reducido de 8 a 6
+    right: 8, // Reducido de 10 a 8
     zIndex: 10,
     backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: 12,
+    borderRadius: 10, // Reducido de 12 a 10
     padding: 2,
   },
   content: { flex: 1, backgroundColor: '#F8F8FA' },
-  contentArea: { flex: 1, padding: 12 },
-  firmasListContent: { paddingBottom: 24 },
+  contentArea: { flex: 1, padding: 10 }, // Reducido de 12 a 10
+  firmasListContent: { paddingBottom: 20 }, // Reducido de 24 a 20
   noFirmasText: {
     textAlign: 'center',
     color: '#999',
@@ -205,11 +275,11 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   flex1: { flex: 1 },
-  avatarMargin: { marginRight: 8 },
+  avatarMargin: { marginRight: 6 }, // Reducido de 8 a 6
   actionsContainer: {
     width: BUTTON_WIDTH * 3,
     flexDirection: 'row',
-    height: 160,
+    height: 130, // Aumentado de 120 a 130
   },
   actionButtonDetalle: {
     width: BUTTON_WIDTH,
@@ -241,77 +311,78 @@ const styles = StyleSheet.create({
   },
   swipeContainer: {
     width: '100%',
-    height: 160,
-    paddingHorizontal: 12,
-    marginBottom: 10,
+    height: 130, // Aumentado de 120 a 130 para dar más espacio
+    paddingHorizontal: 10,
+    marginBottom: 8,
   },
   mailCard: {
-    height: 160,
+    height: 130, // Aumentado de 120 a 130
     backgroundColor: '#fff',
     borderColor: theme.colors.primary.main,
     borderWidth: 1.5,
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   mailHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 10, // Reducido de 12 a 10
+    paddingTop: 6, // Reducido de 8 a 6
     paddingBottom: 2,
-    gap: 8,
+    gap: 6, // Reducido de 8 a 6
   },
   rowAlignCenterFlex1: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   mailSenderText: {
-    fontSize: 13,
+    fontSize: 12, // Reducido de 13 a 12
     color: theme.colors.text.primary,
     fontWeight: '600',
   },
   mailJobText: {
-    fontSize: 12,
+    fontSize: 11, // Reducido de 12 a 11
     color: theme.colors.text.secondary,
     fontWeight: '400',
   },
   mailSubjectRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6, // Reducido de 8 a 6 para comprimir más
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    flex: 1, // Añadido flex para que use el espacio disponible
   },
   mailSubjectText: {
-    fontSize: 15,
+    fontSize: 13, // Reducido de 14 a 13
     color: theme.colors.text.primary,
     fontWeight: '500',
-    lineHeight: 22,
+    lineHeight: 18, // Reducido de 20 a 18
   },
   mailActionsRowNoBorder: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 2,
+    paddingHorizontal: 10,
+    paddingTop: 4, // Reducido para ajustar mejor
+    paddingBottom: 6,
     gap: 4,
   },
   mailPrioridadText: {
-    fontSize: 12,
+    fontSize: 10, // Reducido de 12 a 10
     color: '#222',
     fontWeight: '700',
     backgroundColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-    minWidth: 80,
+    borderRadius: 6, // Reducido de 8 a 6
+    paddingHorizontal: 6, // Reducido de 8 a 6
+    paddingVertical: 1, // Reducido de 2 a 1
+    marginRight: 6, // Reducido de 8 a 6
+    minWidth: 60, // Reducido de 80 a 60
   },
   mailDateText: {
-    fontSize: 12,
+    fontSize: 10, // Reducido de 12 a 10
     color: theme.colors.text.secondary,
     fontWeight: '400',
     textAlign: 'right',
-    minWidth: 120,
+    minWidth: 100, // Reducido de 120 a 100
   },
   extraInfoContainer: {
     marginTop: 8,
@@ -395,6 +466,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  searchContainer: {
+    backgroundColor: '#F8F8FA',
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.primary.main,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    height: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 0,
+    fontWeight: '400',
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
   },
 });
 

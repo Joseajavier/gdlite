@@ -7,6 +7,7 @@ import {
   Alert,
   Image,
   Animated,
+  TextInput,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -25,10 +26,41 @@ const Avisos: React.FC = () => {
   const [avisoActual, setAvisoActual] = useState<any>(null);
   const [responderVisible, setResponderVisible] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const navigation = useNavigation<NavigationProp<any>>();
   const { avisos } = useAvisos();
 
   const handleUserMenuToggle = () => setShowUserMenu((v) => !v);
+
+  // Función para filtrar avisos basado en el texto de búsqueda
+  const filteredAvisos = avisos?.filter((item: any) => {
+    if (!searchText.trim()) return true;
+    
+    const searchLower = searchText.toLowerCase();
+    const searchFields = [
+      item?.nombreUsuario,
+      item?.puestoTrabajo,
+      item?.puesto,
+      item?.asunto,
+      item?.comentario,
+      item?.registro,
+      item?.materia,
+      item?.estado,
+      item?.etiquetas,
+      item?.interesado,
+      item?.solicitante,
+      item?.referencia2,
+      item?.extracto,
+      // Convertir prioridad a texto
+      typeof item?.prioridad === 'number' && item.prioridad >= 0 && item.prioridad <= 4
+        ? ['Muy Baja', 'Baja', 'Media', 'Alta', 'Muy Alta'][item.prioridad]
+        : '',
+    ];
+    
+    return searchFields.some(field => 
+      field && field.toString().toLowerCase().includes(searchLower)
+    );
+  }) || [];
 
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
@@ -154,26 +186,35 @@ const Avisos: React.FC = () => {
       fechaCorta = '-';
     }
 
+    const handleCardPress = () => {
+      navigation.navigate('AvisoDetalle', {
+        aviso: item,
+        onReenviar: () => Alert.alert('Reenviar', 'En desarrollo'),
+        onResponder: () => Alert.alert('Responder', 'En desarrollo'),
+        onMarcarNoLeido: () => Alert.alert('No leído', 'En desarrollo'),
+      });
+    };
+
     return (
       <Swipeable
         renderRightActions={(prog, dragX) => renderRightActions(prog, dragX, item)}
         overshootRight={false}
         rightThreshold={BUTTON_WIDTH}
       >
-        <View style={styles.swipeContainer}>
+        <TouchableOpacity style={styles.swipeContainer} onPress={handleCardPress} activeOpacity={0.7}>
           <View style={styles.mailCard}>
             {/* Icono de deslizamiento en la esquina superior derecha */}
             <View style={styles.swipeHintIconContainer}>
-              <MaterialIcons name="swipe" size={22} color="#bbb" />
+              <MaterialIcons name="swipe" size={20} color="#bbb" /> {/* Reducido de 22 a 20 */}
             </View>
             <View style={styles.mailHeaderRow}>
               <View style={styles.rowAlignCenterFlex1}>
-                <Avatar src={item?.ImgUsuario} alt={item?.nombreUsuario} size={44} style={styles.avatarMargin} />
+                <Avatar src={item?.ImgUsuario} alt={item?.nombreUsuario} size={40} style={styles.avatarMargin} /> {/* Reducido de 44 a 40 */}
                 <View style={styles.flex1}>
-                  <Typography style={styles.mailSenderText}>
+                  <Typography style={styles.mailSenderText} numberOfLines={1} ellipsizeMode="tail">
                     Aviso enviado por: {item?.nombreUsuario || 'Sin usuario'}
                   </Typography>
-                  <Typography style={styles.mailJobText}>
+                  <Typography style={styles.mailJobText} numberOfLines={1} ellipsizeMode="tail">
                     {item?.puestoTrabajo || item?.puesto || 'Sin puesto'}
                   </Typography>
                 </View>
@@ -186,7 +227,7 @@ const Avisos: React.FC = () => {
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {item?.asunto || item?.comentario || 'Sin asunto'}
+                {item?.comentario || item?.asunto || 'Sin comentario'}
               </Typography>
             </View>
 
@@ -254,7 +295,7 @@ const Avisos: React.FC = () => {
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Swipeable>
     );
   };
@@ -311,15 +352,36 @@ const Avisos: React.FC = () => {
         navbarTextColor={theme.colors.primary.main}
       >
         <View style={styles.container}>
-          {avisos?.length ? (
+          {/* Buscador */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar en avisos..."
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholderTextColor="#999"
+              />
+              {searchText.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
+                  <MaterialIcons name="clear" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {filteredAvisos?.length ? (
             <FlatList
-              data={avisos}
+              data={filteredAvisos}
               keyExtractor={(it, ix) => it.id?.toString() || ix.toString()}
               renderItem={renderAviso}
               contentContainerStyle={styles.list}
             />
           ) : (
-            <Typography style={styles.noAvisos}>No hay avisos disponibles</Typography>
+            <Typography style={styles.noAvisos}>
+              {searchText.trim() ? 'No se encontraron avisos que coincidan con la búsqueda' : 'No hay avisos disponibles'}
+            </Typography>
           )}
         </View>
 
@@ -359,11 +421,11 @@ const Avisos: React.FC = () => {
 const styles = StyleSheet.create({
   swipeHintIconContainer: {
     position: 'absolute',
-    top: 8,
-    right: 10,
+    top: 6, // Reducido de 8 a 6
+    right: 8, // Reducido de 10 a 8
     zIndex: 10,
     backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: 12,
+    borderRadius: 10, // Reducido de 12 a 10
     padding: 2,
   },
   flex1: {
@@ -437,7 +499,7 @@ const styles = StyleSheet.create({
   },
   list: {
     flexGrow: 1,
-    paddingVertical: 12,
+    paddingVertical: 10, // Reducido de 12 a 10
     backgroundColor: theme.colors.primary.main,
   },
   noAvisos: {
@@ -447,23 +509,23 @@ const styles = StyleSheet.create({
   },
   swipeContainer: {
     width: '100%',
-    height: 160,
-    paddingHorizontal: 12,
-    marginBottom: 10,
+    height: 145, // Aumentado de 130 a 145 para dar más espacio al comentario
+    paddingHorizontal: 10,
+    marginBottom: 8,
     position: 'relative',
   },
   mailCard: {
-    height: 160,
+    height: 145, // Aumentado de 130 a 145
     backgroundColor: '#fff',
     borderColor: theme.colors.primary.main,
     borderWidth: 1.5,
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   actionsContainer: {
     width: BUTTON_WIDTH * 3,
     flexDirection: 'row',
-    height: 160,
+    height: 145, // Aumentado de 130 a 145
   },
   actionButton: {
     width: BUTTON_WIDTH,
@@ -485,76 +547,78 @@ const styles = StyleSheet.create({
   mailHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 10, // Reducido de 12 a 10
+    paddingTop: 6, // Reducido de 8 a 6
     paddingBottom: 2,
-    gap: 8,
+    gap: 6, // Reducido de 8 a 6
   },
   rowAlignCenterFlex1: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatarMargin: { marginRight: 8 },
+  avatarMargin: { marginRight: 6 }, // Reducido de 8 a 6
   mailSenderText: {
-    fontSize: 13,
+    fontSize: 12, // Reducido de 13 a 12
     color: theme.colors.text.primary,
     fontWeight: '600',
   },
   mailJobText: {
-    fontSize: 12,
+    fontSize: 11, // Reducido de 12 a 11
     color: theme.colors.text.secondary,
     fontWeight: '400',
   },
   mailSubjectRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8, // Aumentado de 6 a 8 para dar más espacio al comentario
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    flex: 1, // Añadido flex para que use el espacio disponible
+    minHeight: 36, // Añadido minHeight para asegurar espacio suficiente
   },
   mailSubjectText: {
-    fontSize: 15,
+    fontSize: 13, // Mantenido en 13
     color: theme.colors.text.primary,
     fontWeight: '500',
-    lineHeight: 22,
+    lineHeight: 18, // Mantenido en 18
   },
   mailActionsRowNoBorder: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 2,
+    paddingHorizontal: 10,
+    paddingTop: 4, // Reducido para ajustar mejor
+    paddingBottom: 6,
     gap: 4,
   },
   mailPrioridadText: {
-    fontSize: 12,
+    fontSize: 10, // Reducido de 12 a 10
     color: '#222',
     fontWeight: '700',
     backgroundColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-    minWidth: 80,
+    borderRadius: 6, // Reducido de 8 a 6
+    paddingHorizontal: 6, // Reducido de 8 a 6
+    paddingVertical: 1, // Reducido de 2 a 1
+    marginRight: 6, // Reducido de 8 a 6
+    minWidth: 60, // Reducido de 80 a 60
     textAlign: 'left',
   },
   mailDateText: {
-    fontSize: 12,
+    fontSize: 10, // Reducido de 12 a 10
     color: theme.colors.text.secondary,
     fontWeight: '400',
     textAlign: 'right',
-    minWidth: 120,
+    minWidth: 100, // Reducido de 120 a 100
   },
   extraInfoContainer: {
-    marginTop: 8,
+    marginTop: 4, // Reducido de 6 a 4 para optimizar espacio
     backgroundColor: '#f8f8fa',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 10, // Mantenido en 10
+    padding: 6, // Reducido de 8 a 6 para optimizar espacio
   },
   extraInfoTitle: {
-    fontSize: 14,
+    fontSize: 13, // Reducido de 14 a 13
     fontWeight: '700',
     color: theme.colors.primary.main,
-    marginBottom: 6,
+    marginBottom: 4, // Reducido de 6 a 4
   },
   extraInfoRow: {
     flexDirection: 'row',
@@ -597,6 +661,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     overflow: 'hidden',
+  },
+  searchContainer: {
+    backgroundColor: theme.colors.primary.main,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    height: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 0,
+    fontWeight: '400',
+  },
+  clearButton: {
+    padding: 4,
+    marginLeft: 8,
   },
 });
 
